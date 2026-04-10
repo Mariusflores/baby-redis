@@ -1,15 +1,45 @@
-import java.io.DataInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class Server {
+    final InMemoryStore store = new InMemoryStore();
+
+
+    private String delegate(String [] commands){
+        // Input format i.e. SET hello world
+        String command = commands[0];
+        String key = commands[1];
+        String value = "";
+
+
+        switch (command.toUpperCase()){
+            case "SET" -> {
+                value = commands[2];
+                store.set(key, value);
+                return "OK";
+            }
+            case "GET" -> {
+                String result = store.get(key);
+                return result == null ? "NOT FOUND" : result;
+            }
+            case "DELETE" -> {
+                store.delete(key);
+                return "OK";
+            }
+            default -> {
+                return "ERR Unknown Command";
+            }
+        }
+    }
 
 
 
     public static void main(String[] args) {
-        final InMemoryStore store = new InMemoryStore();
-        //Server server = new Server();
+        Server server = new Server();
         System.out.println("Starting server...");
 
         try {
@@ -24,38 +54,29 @@ public class Server {
             System.out.println("Client connected");
 
             // Read message from the client
-            DataInputStream d = new DataInputStream(s.getInputStream());
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
 
-            // Get first message SET foo bar
-            String command1 = d.readUTF();
+            String line;
 
-            String[] commands = command1.split(" ");
-            System.out.printf("Setting %s as %s%n",commands[1],commands[2]);
-
-            // call store
-
-            store.set(commands[1],commands[2]);
-
-            // second message GET foo
-            String command2 = d.readUTF();
-            commands = command2.split(" ");
-            String result = store.get(commands[1]);
-            //print out results
-            System.out.printf("Key %s Value %s%n", commands[1], result);
-
-            // last message DELETE foo
-            String command3 = d.readUTF();
-            commands = command3.split(" ");
-            System.out.printf("deleting %s%n", commands[1]);
-            store.delete(commands[1]);
-
-            //double check foo got deleted
-            result = store.get(commands[1]);
-            System.out.printf("Deleted value: %s%n", result);
+            while((line = reader.readLine()) != null){
+                System.out.println("Command " + line);
 
 
+                String[] commands = line.trim().split(" ");
+
+                if(commands.length < 2){
+                    throw new RuntimeException("Command Format unknown");
+                }
+                String result = server.delegate(commands);
+
+                System.out.println("Result: " + result);
+
+            }
 
             // Close socket
+            s.close();
+
             ss.close();
 
         } catch (IOException e) {
