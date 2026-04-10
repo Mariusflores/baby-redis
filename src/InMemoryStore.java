@@ -2,7 +2,7 @@ import java.util.HashMap;
 
 public class InMemoryStore {
 
-    private HashMap<String, String> store;
+    private final HashMap<String, String> store;
 
     public InMemoryStore(){
         store = new HashMap<>();
