@@ -45,48 +45,57 @@ public class Server {
         System.out.println("Starting server...");
 
         try {
-
             // Create a ServerSocket listening on port 6379
             ServerSocket ss = new ServerSocket(6379);
 
-            System.out.println("Server started listening on port 6379... ");
+            //noinspection InfiniteLoopStatement
+            while (true){
 
-            // Accept a connection from a client
-            Socket s = ss.accept();
-            System.out.println("Client connected");
+                Socket s = ss.accept();
+                System.out.println("Server started listening on port 6379... ");
 
-            // Declare a buffered reader
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-
-            // Declare an Output Writer
-            PrintWriter out = new PrintWriter(
-                    new OutputStreamWriter (s.getOutputStream()), true
-            );
-
-            String line;
-
-            while((line = reader.readLine()) != null){
-                System.out.println("Command " + line);
+                // Accept a connection from a client
 
 
-                String[] commands = line.trim().split(" ");
+                System.out.println("Client connected");
 
-                if(commands.length < 2){
-                    throw new RuntimeException("Command Format unknown");
+                // Declare a buffered reader
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+
+                // Declare an Output Writer
+                PrintWriter out = new PrintWriter(
+                        new OutputStreamWriter (s.getOutputStream()), true
+                );
+
+                String line;
+
+                while((line = reader.readLine()) != null){
+                    System.out.println("Command " + line);
+
+
+                    String[] commands = line.trim().split(" ");
+
+                    if(commands.length == 1 && commands[0].equalsIgnoreCase("QUIT")){
+                        // Close connections
+                        break;
+                    }
+                    if(commands.length < 2){
+                        out.println("ERR expected at least <2> arguments");
+                        continue;
+                    }
+                    String result = server.delegate(commands);
+
+                    out.println(result);
+
                 }
-                String result = server.delegate(commands);
 
-                out.println(result);
+                reader.close();
+                out.close();
+                s.close();
+
 
             }
-
-            // Close connections
-
-            reader.close();
-            out.close();
-            s.close();
-            ss.close();
 
         } catch (IOException e) {
             throw new RuntimeException(e);

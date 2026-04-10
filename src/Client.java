@@ -1,10 +1,14 @@
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
 
 public class Client {
     public static void main(String[] args) {
 
+        List<String> allowedCommands = Arrays.asList("SET", "GET", "DELETE", "QUIT");
         try {
             Socket s = new Socket("localhost", 6379);
 
@@ -15,20 +19,44 @@ public class Client {
                     new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8)
             );
 
-            out.println("SET foo bar");
-            System.out.printf("Result: %s%n", reader.readLine());
+            Scanner scanner = new Scanner(System.in);
 
-            out.println("GET foo");
-            System.out.printf("Result: %s%n", reader.readLine());
+            System.out.println("Welcome");
+            System.out.println("Supported commands are SET, GET, DELETE");
+            System.out.println("SET takes key value pair, the other takes only key");
+            System.out.println("Allowed format is <command> <key> <value>");
+            System.out.println("Type HELP for information or QUIT to stop");
+            while (scanner.hasNext()){
+                String line = scanner.nextLine();
 
-            out.println("DELETE foo");
-            System.out.printf("Result: %s%n", reader.readLine());
+                    if(line.equalsIgnoreCase("HELP")){
+                        System.out.println("Supported commands are SET, GET, DELETE");
+                        System.out.println("SET takes key value pair, the other takes only key");
+                        System.out.println("Allowed format is <command> <key> <value>");
+                    }else if (allowedCommands.contains(line.trim().split(" ")[0].toUpperCase())){
 
-            out.println("GET foo");
-            System.out.printf("Result: %s%n", reader.readLine());
+                        out.println(line);
+
+                        if(line.equalsIgnoreCase("QUIT")){
+                            return;
+                        }
+
+                        System.out.println(reader.readLine());
+                    }
+                    else{
+                        System.out.println("Supported commands are SET, GET, DELETE");
+                        System.out.println("Type HELP for information or QUIT to stop");
+
+                    }
+
+            }
 
 
             // Closing connections
+
+            scanner.close();
+
+            reader.close();
 
             //Closing socket
             s.close();
