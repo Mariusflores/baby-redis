@@ -17,6 +17,7 @@ public class Client {
             out.println("SET foo bar");
             out.println("GET foo");
             out.println("DELETE foo");
+            out.println("GET foo");
 
             // Closing connections
 

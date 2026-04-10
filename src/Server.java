@@ -13,12 +13,16 @@ public class Server {
         // Input format i.e. SET hello world
         String command = commands[0];
         String key = commands[1];
-        String value;
-
+        String value = "";
+        if(commands.length > 2){
+            value = commands[2];
+        }
 
         switch (command.toUpperCase()){
             case "SET" -> {
-                value = commands[2];
+              if(value.isEmpty()){
+                  return "ERR Value isnt provided";
+              }
                 store.set(key, value);
                 return "OK";
             }
