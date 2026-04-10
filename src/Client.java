@@ -13,10 +13,16 @@ public class Client {
             );
 
             // message to be displayed
-            d.writeUTF("Hello World");
+            d.writeUTF("SET foo bar");
 
             // Flushing out internal buffers
             // Optimizing for better performance
+            d.flush();
+
+            d.writeUTF("GET foo");
+            d.flush();
+
+            d.writeUTF("DELETE foo");
             d.flush();
 
             // Closing connections
