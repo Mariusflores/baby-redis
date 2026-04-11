@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    final InMemoryStore store = new InMemoryStore();
+    private final InMemoryStore store = new InMemoryStore();
 
     private String delegate(String[] commands) {
         if (commands.length < 2) {
@@ -101,6 +101,8 @@ public class Server {
                 // Accept a connection from a client
                 Socket s = ss.accept();
                 System.out.println("Client connected");
+                //Declare a file writer
+                BufferedWriter fileWriter = new BufferedWriter(new FileWriter("queries.txt"));
 
                 Runnable task = () -> {
                     try {
@@ -113,13 +115,14 @@ public class Server {
                                 new OutputStreamWriter(s.getOutputStream()), true
                         );
 
+
                         String line;
 
 
                         while ((line = reader.readLine()) != null) {
                             System.out.println("Command " + line);
 
-
+                            fileWriter.write(line + "\n");
                             String[] commands = line.trim().split(" ");
 
                             if (commands.length == 1 && commands[0].equalsIgnoreCase("QUIT")) {
@@ -134,6 +137,7 @@ public class Server {
                         }
 
                         reader.close();
+                        fileWriter.close();
                         out.close();
                         s.close();
                     } catch (IOException e) {
