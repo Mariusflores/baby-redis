@@ -4,7 +4,9 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutorService;
@@ -17,11 +19,29 @@ public class Server {
 
     public Server() throws IOException {
         replay();
+
+
+        Runnable task = () -> {
+            while (true) {
+                try {
+                    ExpiringKey key = (ExpiringKey) expireQueue.take();
+
+                    store.purge(key.getKey());
+
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        Thread.ofVirtual().start(task);
     }
 
     private void replay() throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader("queries.txt"));
         String line;
+        List<String> expiredKeys = new ArrayList<>();
+
         while ((line = reader.readLine()) != null) {
             String[] params = parseOperation(line);
             String operation = params[0];
@@ -35,10 +55,7 @@ public class Server {
                     store.set(key, value);
                 }
 
-                case "DELETE" -> {
-                    store.delete(key);
-
-                }
+                case "DELETE" -> store.delete(key);
                 case "SADD" -> {
                     var values = Arrays.copyOfRange(params, 2, params.length);
                     store.sAdd(key, values);
@@ -47,7 +64,20 @@ public class Server {
                     var values = Arrays.copyOfRange(params, 2, params.length);
                     store.sRem(key, values);
                 }
+                case "EXPIRE", "EXP" -> {
+                    long expiryTimestamp = Long.parseLong(params[2]);
+
+                    if (expiryTimestamp < System.currentTimeMillis()) {
+                        expiredKeys.add(key);
+                    } else {
+                        ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
+                        expireQueue.add(expiringKey);
+                    }
+                }
             }
+        }
+        for (String expired : expiredKeys) {
+            store.purge(expired);
         }
     }
 
@@ -112,6 +142,30 @@ public class Server {
                 var set = store.sMembers(key);
 
                 return String.join(",", set);
+            }
+            case "EXPIRE", "EXP" -> {
+
+                // Start simple parse the input, add to queue and write to file.
+                // Error handling next iteration
+                if (commands.length < 3) return "ERR missing arguments";
+
+                long value = Long.parseLong(commands[2]);
+                long expiryTimestamp = System.currentTimeMillis() + (value * 1000);
+
+
+                ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
+
+                expireQueue.add(expiringKey);
+
+                // Format file write line Current timestamp + given time
+
+                commands[2] = Long.toString(expiryTimestamp);
+
+                String newLine = String.join(" ", commands);
+
+                writeToFile(newLine);
+
+                return String.format("Expires in %d seconds", value);
             }
 
             default -> {

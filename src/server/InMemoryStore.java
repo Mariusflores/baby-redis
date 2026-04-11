@@ -57,4 +57,9 @@ public class InMemoryStore {
         return Set.copyOf(set);
     }
 
+    public void purge(String key) {
+        stringStore.remove(key);
+        setStore.remove(key);
+    }
+
 }

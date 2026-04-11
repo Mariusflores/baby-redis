@@ -26,7 +26,8 @@ public class Client {
 
     public static void main(String[] args) {
 
-        List<String> allowedCommands = Arrays.asList("SET", "GET", "DELETE", "QUIT", "SADD", "SREM", "SISMEMBER", "SMEMBERS", "SIM", "SM");
+        List<String> allowedCommands =
+                Arrays.asList("SET", "GET", "DELETE", "QUIT", "SADD", "SREM", "SISMEMBER", "SMEMBERS", "SIM", "SM", "EXPIRE", "EXP");
         try {
             Socket s = new Socket("localhost", 6379);
 
