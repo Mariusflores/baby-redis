@@ -213,7 +213,6 @@ public class Server {
             });
             Runtime.getRuntime().addShutdownHook(closeServerHook);
 
-            //noinspection InfiniteLoopStatement
             while (true) {
 
 
@@ -221,51 +220,55 @@ public class Server {
                 Socket s = ss.accept();
                 System.out.println("Client connected");
 
-                Runnable task = () -> {
-                    try {
-                        // Declare a buffered reader
-                        BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-
-                        // Declare an Output Writer
-                        PrintWriter out = new PrintWriter(
-                                new OutputStreamWriter(s.getOutputStream()), true
-                        );
-
-
-                        String line;
-
-
-                        while ((line = reader.readLine()) != null) {
-                            System.out.println("Command " + line);
-
-                            if (line.trim().split(" ").length == 1 &&
-                                    line.trim().split(" ")[0].equalsIgnoreCase("QUIT")) {
-                                // Close connections
-                                break;
-                            }
-
-                            String result = server.delegate(line);
-
-                            out.println(result);
-
-                        }
-
-                        reader.close();
-                        out.close();
-                        s.close();
-
-                    } catch (IOException e) {
-                        System.out.println("Error: " + e);
-                    }
-
-
-                };
+                Runnable task = handleClient(s, server);
 
                 executor.submit(task);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Runnable handleClient(Socket s, Server server) {
+        return () -> {
+            try {
+                // Declare a buffered reader
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+
+                // Declare an Output Writer
+                PrintWriter out = new PrintWriter(
+                        new OutputStreamWriter(s.getOutputStream()), true
+                );
+
+
+                String line;
+
+
+                while ((line = reader.readLine()) != null) {
+                    System.out.println("Command " + line);
+
+                    if (line.trim().split(" ").length == 1 &&
+                            line.trim().split(" ")[0].equalsIgnoreCase("QUIT")) {
+                        // Close connections
+                        break;
+                    }
+
+                    String result = server.delegate(line);
+
+                    out.println(result);
+
+                }
+
+                reader.close();
+                out.close();
+                s.close();
+
+            } catch (IOException e) {
+                System.out.println("Error: " + e);
+            }
+
+
+        };
     }
 }
