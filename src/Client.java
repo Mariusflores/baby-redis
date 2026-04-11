@@ -6,9 +6,27 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Client {
+
+    public static void help() {
+        System.out.println("=== Baby Redis ===");
+        System.out.println("String commands:");
+        System.out.println("  SET <key> <value>        Store a value");
+        System.out.println("  GET <key>                Retrieve a value");
+        System.out.println("  DELETE <key>             Remove a key");
+        System.out.println(" ");
+        System.out.println("Set commands:");
+        System.out.println("  SADD <key> <val> [val]   Add values to a set");
+        System.out.println("  SREM <key> <val> [val]   Remove values from a set");
+        System.out.println("  SISMEMBER/SIM <key> <val>    Check if value is in set");
+        System.out.println("  SMEMBERS/SM <key>           List all values in set");
+        System.out.println(" ");
+        System.out.println("  HELP                     Show this message");
+        System.out.println("  QUIT                     Disconnect");
+    }
+
     public static void main(String[] args) {
 
-        List<String> allowedCommands = Arrays.asList("SET", "GET", "DELETE", "QUIT");
+        List<String> allowedCommands = Arrays.asList("SET", "GET", "DELETE", "QUIT", "SADD", "SREM", "SISMEMBER", "SMEMBERS", "SIM", "SM");
         try {
             Socket s = new Socket("localhost", 6379);
 
@@ -21,33 +39,26 @@ public class Client {
 
             Scanner scanner = new Scanner(System.in);
 
-            System.out.println("Welcome");
-            System.out.println("Supported commands are SET, GET, DELETE");
-            System.out.println("SET takes key value pair, the other takes only key");
-            System.out.println("Allowed format is <command> <key> <value>");
-            System.out.println("Type HELP for information or QUIT to stop");
-            while (scanner.hasNext()){
+            Client.help();
+            while (scanner.hasNext()) {
                 String line = scanner.nextLine();
 
-                    if(line.equalsIgnoreCase("HELP")){
-                        System.out.println("Supported commands are SET, GET, DELETE");
-                        System.out.println("SET takes key value pair, the other takes only key");
-                        System.out.println("Allowed format is <command> <key> <value>");
-                    }else if (allowedCommands.contains(line.trim().split(" ")[0].toUpperCase())){
+                if (line.equalsIgnoreCase("HELP")) {
+                    Client.help();
+                } else if (allowedCommands.contains(line.trim().split(" ")[0].toUpperCase())) {
 
-                        out.println(line);
+                    out.println(line);
 
-                        if(line.equalsIgnoreCase("QUIT")){
-                            return;
-                        }
-
-                        System.out.println(reader.readLine());
+                    if (line.equalsIgnoreCase("QUIT")) {
+                        return;
                     }
-                    else{
-                        System.out.println("Supported commands are SET, GET, DELETE");
-                        System.out.println("Type HELP for information or QUIT to stop");
 
-                    }
+                    System.out.println(reader.readLine());
+                } else {
+                    System.out.println("Supported commands are SET, GET, DELETE");
+                    System.out.println("Type HELP for information or QUIT to stop");
+
+                }
 
             }
 

@@ -54,7 +54,7 @@ public class Server {
                 store.sRem(key, values);
                 return "OK";
             }
-            case "SISMEMBER" -> {
+            case "SISMEMBER", "SIM" -> {
                 String value = "";
                 if (commands.length > 2) {
                     value = commands[2];
@@ -66,7 +66,7 @@ public class Server {
                 return store.sIsMember(key, value) ? "TRUE" : "FALSE";
 
             }
-            case "SMEMBERS" -> {
+            case "SMEMBERS", "SM" -> {
 
                 var set = store.sMembers(key);
 
