@@ -2,31 +2,37 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
     final InMemoryStore store = new InMemoryStore();
 
-    private String delegate(String [] commands){
-        if(commands.length < 2){
+    private String delegate(String[] commands) {
+        if (commands.length < 2) {
             return "ERR expected at least <2> arguments";
         }
         // Input format i.e. SET hello world
         String command = commands[0];
         String key = commands[1];
-        String value = "";
 
-        if(commands.length > 2){
-            value = commands[2];
-        }
 
-        switch (command.toUpperCase()){
+        switch (command.toUpperCase()) {
             case "SET" -> {
-              if(value.isEmpty()){
-                  return "ERR Value isnt provided";
-              }
-                store.set(key, value);
+                StringBuilder builder = new StringBuilder();
+                var values = Arrays.copyOfRange(commands, 2, commands.length);
+
+                if (commands.length > 2) {
+                    for (String value : values) {
+                        builder.append(value).append(" ");
+                    }
+
+                }
+                if (builder.toString().isEmpty()) {
+                    return "ERR Value isnt provided";
+                }
+                store.set(key, builder.toString().trim());
                 return "OK";
             }
             case "GET" -> {
@@ -37,12 +43,41 @@ public class Server {
                 store.delete(key);
                 return "OK";
             }
+            case "SADD" -> {
+                var values = Arrays.copyOfRange(commands, 2, commands.length);
+                store.sAdd(key, values);
+                return "OK";
+            }
+            case "SREM" -> {
+                var values = Arrays.copyOfRange(commands, 2, commands.length);
+
+                store.sRem(key, values);
+                return "OK";
+            }
+            case "SISMEMBER" -> {
+                String value = "";
+                if (commands.length > 2) {
+                    value = commands[2];
+                }
+                if (value.isEmpty()) {
+                    return "ERR Value isnt provided";
+
+                }
+                return store.sIsMember(key, value) ? "TRUE" : "FALSE";
+
+            }
+            case "SMEMBERS" -> {
+
+                var set = store.sMembers(key);
+
+                return String.join(",", set);
+            }
+
             default -> {
                 return "ERR Unknown Command";
             }
         }
     }
-
 
 
     public static void main(String[] args) {
@@ -53,14 +88,14 @@ public class Server {
         try (
                 ServerSocket ss = new ServerSocket(6379);
                 ExecutorService executor = Executors.newFixedThreadPool(10)
-                ) {
+        ) {
             // Create a ServerSocket listening on port 6379
 
             System.out.println("Server started listening on port 6379... ");
 
 
             //noinspection InfiniteLoopStatement
-            while (true){
+            while (true) {
 
 
                 // Accept a connection from a client
@@ -68,26 +103,26 @@ public class Server {
                 System.out.println("Client connected");
 
                 Runnable task = () -> {
-                    try{
+                    try {
                         // Declare a buffered reader
                         BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
 
                         // Declare an Output Writer
                         PrintWriter out = new PrintWriter(
-                                new OutputStreamWriter (s.getOutputStream()), true
+                                new OutputStreamWriter(s.getOutputStream()), true
                         );
 
                         String line;
 
 
-                        while((line = reader.readLine()) != null){
+                        while ((line = reader.readLine()) != null) {
                             System.out.println("Command " + line);
 
 
                             String[] commands = line.trim().split(" ");
 
-                            if(commands.length == 1 && commands[0].equalsIgnoreCase("QUIT")){
+                            if (commands.length == 1 && commands[0].equalsIgnoreCase("QUIT")) {
                                 // Close connections
                                 break;
                             }
@@ -101,7 +136,7 @@ public class Server {
                         reader.close();
                         out.close();
                         s.close();
-                    }catch (IOException e){
+                    } catch (IOException e) {
                         System.out.println("Error: " + e);
                     }
 
@@ -109,8 +144,6 @@ public class Server {
                 };
 
                 executor.submit(task);
-
-
 
 
             }

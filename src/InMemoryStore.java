@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,16 +25,20 @@ public class InMemoryStore {
         stringStore.remove(key);
     }
 
-    public void sAdd(String key, String value) {
+    public void sAdd(String key, String... values) {
         var set = setStore.computeIfAbsent(key, v -> new HashSet<>());
-        set.add(value);
+
+        set.addAll(Arrays.asList(values));
     }
 
-    public void sRem(String key, String value) {
+    public void sRem(String key, String... values) {
 
         var set = setStore.get(key);
 
-        if (set != null) set.remove(value);
+        for (String value : values) {
+            if (set != null) set.remove(value);
+
+        }
 
     }
 
@@ -44,7 +49,10 @@ public class InMemoryStore {
     }
 
     public Set<String> sMembers(String key) {
-        return Set.copyOf(setStore.get(key));
+        var set = setStore.get(key);
+        if (set == null) return new HashSet<>();
+
+        return Set.copyOf(set);
     }
 
 }
