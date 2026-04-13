@@ -45,6 +45,9 @@ public class InMemoryStore {
             if (set != null) set.remove(value);
 
         }
+        if (set != null && set.isEmpty()) {
+            setStore.remove(key);
+        }
 
     }
 
