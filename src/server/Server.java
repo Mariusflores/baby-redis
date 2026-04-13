@@ -95,7 +95,7 @@ public class Server {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
                 String value = String.join(" ", values).trim();
                 if (value.isEmpty()) {
-                    return "ERR Value isnt provided";
+                    return "ERR Value isn't provided";
                 }
                 store.set(key, value);
                 writeToFile(line);
@@ -131,7 +131,7 @@ public class Server {
                     value = commands[2];
                 }
                 if (value.isEmpty()) {
-                    return "ERR Value isnt provided";
+                    return "ERR Value isn't provided";
 
                 }
                 return store.sIsMember(key, value) ? "TRUE" : "FALSE";
