@@ -1,3 +1,5 @@
+package org.example.server;
+
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
@@ -12,7 +14,7 @@ public class ExpiringKey implements Delayed {
 
     @Override
     public long getDelay(TimeUnit unit) {
-        return TimeUnit.MILLISECONDS.convert((expireAt - System.currentTimeMillis()), unit);
+        return unit.convert((expireAt - System.currentTimeMillis()), TimeUnit.MILLISECONDS);
     }
 
     @Override

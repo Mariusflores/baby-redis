@@ -1,9 +1,17 @@
+package org.example.server;
+
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class SnapshotManager {
+
+    private final File snapshotFile;
+
+    public SnapshotManager(File file) {
+        snapshotFile = file;
+    }
 
 
     public void write(
@@ -32,12 +40,11 @@ public class SnapshotManager {
             fileWriter.flush();
             fileWriter.close();
 
-            File originalFile = new File("snapshot.txt");
 
-            if (originalFile.exists()) {
-                originalFile.delete();
+            if (snapshotFile.exists()) {
+                snapshotFile.delete();
             }
-            temp.renameTo(originalFile);
+            temp.renameTo(snapshotFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -46,7 +53,6 @@ public class SnapshotManager {
 
     public SnapshotData read() {
         BufferedReader reader;
-        File snapshotFile = new File("snapshot.txt");
         Map<String, String> stringSnapshot = new HashMap<>();
         Map<String, Set<String>> setSnapshot = new HashMap<>();
         Map<String, Long> expiryQueueSnapshot = new HashMap<>();
@@ -86,6 +92,7 @@ public class SnapshotManager {
                     }
                 }
             }
+            reader.close();
 
         } catch (IOException e) {
             throw new RuntimeException(e);

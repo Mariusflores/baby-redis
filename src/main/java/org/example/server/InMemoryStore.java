@@ -1,3 +1,5 @@
+package org.example.server;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -6,11 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class InMemoryStore {
 
+
     private final ConcurrentHashMap<String, String> stringStore;
     private final ConcurrentHashMap<String, Set<String>> setStore;
-    private final SnapshotManager snapshotManager = new SnapshotManager();
+    private final SnapshotManager snapshotManager;
 
-    public InMemoryStore() {
+    public InMemoryStore(SnapshotManager snapshotManager) {
+        this.snapshotManager = snapshotManager;
         stringStore = new ConcurrentHashMap<>();
         setStore = new ConcurrentHashMap<>();
     }

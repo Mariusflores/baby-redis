@@ -1,3 +1,5 @@
+package org.example.server;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -7,13 +9,16 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 public class Server {
-    private final InMemoryStore store = new InMemoryStore();
+    private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
+
+    private final InMemoryStore store = new InMemoryStore(snapshotManager);
     private final DelayQueue<Delayed> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
+
     public Server() throws IOException {
         // Retrieves instigates snapshot retrieval
-        retrieveSnapshot();
+        readSnapshot();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
             while (true) {
@@ -36,7 +41,7 @@ public class Server {
                 try {
                     Thread.sleep(30000);
 
-                    instigateSnapshot();
+                    writeSnapshot();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -47,7 +52,7 @@ public class Server {
         Thread.ofVirtual().start(syncSnapshot);
     }
 
-    private void retrieveSnapshot() {
+    private void readSnapshot() {
 
         SnapshotData snapshot = store.readSnapshot();
 
@@ -147,10 +152,10 @@ public class Server {
     }
 
     public void close() throws IOException {
-        instigateSnapshot();
+        writeSnapshot();
     }
 
-    private void instigateSnapshot() {
+    private void writeSnapshot() {
         store.writeSnapshot(Map.copyOf(expireQueueState));
     }
 
@@ -166,11 +171,11 @@ public class Server {
                 ExecutorService executor = Executors.newFixedThreadPool(10)
         ) {
             Server server = new Server();
-            System.out.println("Starting main.java.server...");
+            System.out.println("Starting main.java.org.example.server...");
 
-            System.out.println("main.java.Server started listening on port 6379... ");
+            System.out.println("main.java.org.example.server.Server started listening on port 6379... ");
 
-            // Shutdown hook to close main.java.Server file writer
+            // Shutdown hook to close main.java.org.example.server.Server file writer
             Thread closeServerHook = new Thread(() -> {
                 try {
                     server.close();
@@ -185,7 +190,7 @@ public class Server {
 
                 // Accept a connection from a client
                 Socket s = ss.accept();
-                System.out.println("Client connected");
+                System.out.println("org.example.Client connected");
 
                 Runnable task = handleClient(s, server);
 
