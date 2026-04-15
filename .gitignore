@@ -32,3 +32,4 @@ bin/
 /.idea/
 queries.txt
 /target/
+snapshot.txt

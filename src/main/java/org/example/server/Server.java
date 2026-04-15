@@ -132,6 +132,19 @@ public class Server {
 
                 return String.join(",", set);
             }
+            case "TTL" -> {
+                Long timestamp = expireQueueState.get(key);
+
+                if(timestamp == null){
+                    return "No expiry set";
+                }
+
+                long ttl = (timestamp - System.currentTimeMillis()) / 1000;
+                if(ttl < 0){
+                    return "Expired.";
+                }
+                return String.format("Time to Expiry: %d s", ttl);
+            }
             case "EXPIRE", "EXP" -> {
 
                 // Start simple parse the input, add to queue and write to file.
