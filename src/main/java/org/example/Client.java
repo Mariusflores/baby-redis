@@ -22,6 +22,7 @@ public class Client {
         System.out.println("  SISMEMBER/SIM <key> <val>    Check if value is in set");
         System.out.println("  SMEMBERS/SM <key>           List all values in set");
         System.out.println(" ");
+        System.out.println(" EXPIRE <key> <seconds> ");
         System.out.println("  HELP                     Show this message");
         System.out.println("  QUIT                     Disconnect");
     }

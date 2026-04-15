@@ -12,7 +12,7 @@ public class Server {
     private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
 
     private final InMemoryStore store = new InMemoryStore(snapshotManager);
-    private final DelayQueue<Delayed> expireQueue = new DelayQueue<>();
+    private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
 
@@ -91,7 +91,15 @@ public class Server {
                 return result == null ? "NOT FOUND" : result;
             }
             case "DELETE" -> {
+                // Delete existing expire countdown
+                if (expireQueueState.containsKey(key)){
+                    expireQueueState.remove(key);
+                    expireQueue.removeIf(entry -> entry.getKey().equals(key));
+
+                }
+                // Delete key from store
                 store.delete(key);
+
                 return "OK";
             }
             case "SADD" -> {
