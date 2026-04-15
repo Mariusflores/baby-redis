@@ -9,16 +9,16 @@ import java.util.Scanner;
 /**
  * A simple command-line interface (CLI) for interacting with a Baby Redis server.
  * The CLI allows users to enter Redis commands and see the responses from the server.
- * It provides a help command to display available commands and their descriptions, 
- * and a quit command to disconnect from the server. 
+ * It provides a help command to display available commands and their descriptions,
+ * and a quit command to disconnect from the server.
  * The CLI uses a BabyRedisClient instance to send commands to the server and handle the communication.
  */
 
 public class BabyRedisCli {
 
     /**
-     * Displays a help message with the available commands and their descriptions. 
-     * This method is called when the user types "HELP" in the CLI, 
+     * Displays a help message with the available commands and their descriptions.
+     * This method is called when the user types "HELP" in the CLI,
      * providing guidance on how to use the various Redis commands supported by the Baby Redis server.
      */
     public static void help() {
@@ -42,11 +42,12 @@ public class BabyRedisCli {
     }
 
     /**
-     * The main method that runs the Baby Redis CLI. It creates a BabyRedisClient instance to connect to the Redis server, and then enters a loop to read user input from the command line. 
-     * The user can enter Redis commands, which are sent to the server using the BabyRedisClient instance. 
+     * The main method that runs the Baby Redis CLI. It creates a BabyRedisClient instance to connect to the Redis server, and then enters a loop to read user input from the command line.
+     * The user can enter Redis commands, which are sent to the server using the BabyRedisClient instance.
      * The CLI also handles special commands like "HELP" to display the help message and "QUIT" to disconnect from the
      * server. The CLI validates the commands entered by the user and prints the responses received from the server.
-      * @param args Command-line arguments (not used in this application).
+     *
+     * @param args Command-line arguments (not used in this application).
      */
     public static void main(String[] args) {
         BabyRedisClient client = new BabyRedisClient("localhost", 6379);
