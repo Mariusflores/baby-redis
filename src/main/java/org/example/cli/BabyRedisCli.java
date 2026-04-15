@@ -1,4 +1,4 @@
-package org.example;
+package org.example.cli;
 
 import java.io.*;
 import java.net.Socket;
@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
-public class Client {
+public class BabyRedisCli {
 
     public static void help() {
         System.out.println("=== Baby Redis ===");
@@ -43,12 +43,12 @@ public class Client {
 
             Scanner scanner = new Scanner(System.in);
 
-            Client.help();
+            BabyRedisCli.help();
             while (scanner.hasNext()) {
                 String line = scanner.nextLine();
 
                 if (line.equalsIgnoreCase("HELP")) {
-                    Client.help();
+                    BabyRedisCli.help();
                 } else if (allowedCommands.contains(line.trim().split(" ")[0].toUpperCase())) {
 
                     out.println(line);

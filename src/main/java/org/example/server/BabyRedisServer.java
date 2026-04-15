@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.*;
 
-public class Server {
+public class BabyRedisServer {
     private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
 
     private final InMemoryStore store = new InMemoryStore(snapshotManager);
@@ -16,14 +16,14 @@ public class Server {
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
 
-    public Server() throws IOException {
+    public BabyRedisServer() throws IOException {
         // Retrieves instigates snapshot retrieval
         readSnapshot();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
             while (true) {
                 try {
-                    ExpiringKey key = (ExpiringKey) expireQueue.take();
+                    ExpiringKey key = expireQueue.take();
 
                     store.purge(key.getKey());
                     expireQueueState.remove(key.getKey());
@@ -191,7 +191,7 @@ public class Server {
                 ServerSocket ss = new ServerSocket(6379);
                 ExecutorService executor = Executors.newFixedThreadPool(10)
         ) {
-            Server server = new Server();
+            BabyRedisServer server = new BabyRedisServer();
             System.out.println("Starting main.java.org.example.server...");
 
             System.out.println("main.java.org.example.server.Server started listening on port 6379... ");
@@ -211,7 +211,7 @@ public class Server {
 
                 // Accept a connection from a client
                 Socket s = ss.accept();
-                System.out.println("org.example.Client connected");
+                System.out.println("org.example.cli.Client connected");
 
                 Runnable task = handleClient(s, server);
 
@@ -222,7 +222,7 @@ public class Server {
         }
     }
 
-    private static Runnable handleClient(Socket s, Server server) {
+    private static Runnable handleClient(Socket s, BabyRedisServer server) {
         return () -> {
             try {
                 // Declare a buffered reader

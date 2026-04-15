@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
+    <groupId>io.babyredis</groupId>
     <artifactId>baby-redis</artifactId>
     <version>1.0-SNAPSHOT</version>
 
@@ -21,6 +21,12 @@
             <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.babyredis</groupId>
+            <artifactId>baby-redis-client</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -32,7 +38,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.server.Server</mainClass>
+                            <mainClass>org.example.server.BabyRedisServer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
