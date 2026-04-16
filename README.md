@@ -49,6 +49,13 @@ mvn clean package
 ```bash
 java -jar target/baby-redis.jar
 ```
+The server listens on port `6379` by default.
+
+### Running the CLI
+
+```bash
+mvn exec:java -Dexec.mainClass="io.babyredis.cli.BabyRedisCli"
+```
 
 Example session:
 
@@ -67,6 +74,6 @@ OK
 (integer) 1
 > TTL greeting
 (integer) 58
+> QUIT
 ```
 
-The server listens on port `6379` by default.
