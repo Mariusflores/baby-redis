@@ -37,7 +37,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.server.BabyRedisServer</mainClass>
+                            <mainClass>io.babyredis.server.BabyRedisServer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

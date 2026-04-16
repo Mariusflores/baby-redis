@@ -1,15 +1,11 @@
-package org.example.server;
+package io.babyredis.server;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 /**
- * Manages the snapshotting of the Baby Redis server's in-memory data to a file and reading it back during server startup. 
- * The SnapshotManager class provides methods to write the current state of the in-memory store (including string key-value pairs, sets, and expiring keys) to a snapshot file and to read the snapshot file to restore the in-memory state when the server starts. 
+ * Manages the snapshotting of the Baby Redis server's in-memory data to a file and reading it back during server startup.
+ * The SnapshotManager class provides methods to write the current state of the in-memory store (including string key-value pairs, sets, and expiring keys) to a snapshot file and to read the snapshot file to restore the in-memory state when the server starts.
  * The snapshot file is written in a simple text format, with sections for strings, sets, and expiring keys, allowing for easy serialization and deserialization of the server's state.
  */
 public class SnapshotManager {
@@ -21,6 +17,7 @@ public class SnapshotManager {
 
     /**
      * Constructs a new SnapshotManager with the specified snapshot file. The snapshot file is used to store the serialized state of the Baby Redis server's in-memory data, including string key-value pairs, sets, and expiring keys. The SnapshotManager provides methods to write the current state to the snapshot file and to read the snapshot file to restore the in-memory state during server startup.
+     *
      * @param file the file to be used for storing the snapshot of the Baby Redis server's in-memory data
      */
     public SnapshotManager(File file) {
@@ -29,9 +26,10 @@ public class SnapshotManager {
 
     /**
      * Writes the current state of the Baby Redis server's in-memory data to the snapshot file. This method takes three parameters: a map of string key-value pairs representing the string data, a map of sets representing the set data, and a map of expiring keys with their corresponding expiration timestamps. The method serializes this data into a simple text format, with sections for strings, sets, and expiring keys, and writes it to a temporary file. Once the writing is complete, the temporary file is renamed to the snapshot file, ensuring that the snapshot is saved atomically.
+     *
      * @param stringSnapshot a map of string key-value pairs representing the string data to be snapshotted
-     * @param setSnapshot a map of sets representing the set data to be snapshotted
-     * @param expiryQueue a map of expiring keys with their corresponding expiration timestamps to be snapshotted
+     * @param setSnapshot    a map of sets representing the set data to be snapshotted
+     * @param expiryQueue    a map of expiring keys with their corresponding expiration timestamps to be snapshotted
      */
     public void write(
             Map<String, String> stringSnapshot,
@@ -55,7 +53,6 @@ public class SnapshotManager {
             }
 
             fileWriter.flush();
-        
 
 
             if (snapshotFile.exists()) {
@@ -70,10 +67,11 @@ public class SnapshotManager {
 
     /**
      * Reads the snapshot file and restores the state of the Baby Redis server's in-memory data. This method reads the snapshot file, which is expected to be in a specific text format with sections for strings, sets, and expiring keys. It parses the file line by line, identifying the current section (STRING, SET, or EXPIRE) and populating the corresponding data structures (maps for strings and sets, and a map for expiring keys) based on the content of each line. Once the entire file has been read and parsed, it returns a SnapshotData record containing the restored state of the in-memory data, which can then be used to initialize the server's state during startup.
+     *
      * @return a SnapshotData record containing the restored state of the in-memory data, including string key-value pairs, sets, and expiring keys, read from the snapshot file
      */
     public SnapshotData read() {
-        
+
         Map<String, String> stringSnapshot = new HashMap<>();
         Map<String, Set<String>> setSnapshot = new HashMap<>();
         Map<String, Long> expiryQueueSnapshot = new HashMap<>();

@@ -1,4 +1,4 @@
-package org.example.cli;
+package io.babyredis.cli;
 
 import org.example.BabyRedisClient;
 

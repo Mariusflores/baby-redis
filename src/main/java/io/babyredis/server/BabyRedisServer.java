@@ -1,4 +1,4 @@
-package org.example.server;
+package io.babyredis.server;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -6,7 +6,10 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class BabyRedisServer {
     private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
@@ -92,7 +95,7 @@ public class BabyRedisServer {
             }
             case "DELETE" -> {
                 // Delete existing expire countdown
-                if (expireQueueState.containsKey(key)){
+                if (expireQueueState.containsKey(key)) {
                     expireQueueState.remove(key);
                     expireQueue.removeIf(entry -> entry.getKey().equals(key));
 
@@ -135,12 +138,12 @@ public class BabyRedisServer {
             case "TTL" -> {
                 Long timestamp = expireQueueState.get(key);
 
-                if(timestamp == null){
+                if (timestamp == null) {
                     return "No expiry set";
                 }
 
                 long ttl = (timestamp - System.currentTimeMillis()) / 1000;
-                if(ttl < 0){
+                if (ttl < 0) {
                     return "Expired.";
                 }
                 return String.format("Time to Expiry: %d s", ttl);

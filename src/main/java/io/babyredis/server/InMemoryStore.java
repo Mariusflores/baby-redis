@@ -1,4 +1,4 @@
-package org.example.server;
+package io.babyredis.server;
 
 import java.util.Arrays;
 import java.util.HashSet;

@@ -1,5 +1,7 @@
 package org.example.server;
 
+import io.babyredis.server.InMemoryStore;
+import io.babyredis.server.SnapshotManager;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
