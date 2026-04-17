@@ -1,6 +1,7 @@
 package io.babyredis.cli;
 
-import org.example.BabyRedisClient;
+
+import io.babyredis.BabyRedisClient;
 
 import java.util.Arrays;
 import java.util.List;
