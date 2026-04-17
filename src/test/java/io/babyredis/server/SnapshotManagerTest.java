@@ -1,7 +1,5 @@
-package org.example.server;
+package io.babyredis.server;
 
-import io.babyredis.server.SnapshotData;
-import io.babyredis.server.SnapshotManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 

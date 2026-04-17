@@ -1,6 +1,5 @@
-package org.example.server;
+package io.babyredis.server;
 
-import io.babyredis.server.ExpiringKey;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
