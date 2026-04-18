@@ -26,7 +26,6 @@ systems programming.
 ```
 baby-redis/
 ├── server/    # The key-value store server
-└── cli/       # Development CLI tool
 ```
 
 See also: [baby-redis-client](https://github.com/mariusflores/baby-redis-client)
@@ -38,8 +37,6 @@ See also: [baby-redis-client](https://github.com/mariusflores/baby-redis-client)
 
 - Java 21+
 - Maven
-- [baby-redis-client](https://github.com/mariusflores/baby-redis-client) installed locally (`mvn install` in the client
-  repo)
 
 ### Building
 
@@ -58,3 +55,9 @@ java -jar target/baby-redis.jar
 
 The server listens on port `6379` by default.
 
+## Roadmap
+
+- [ ] Implement RESP-inspired wire protocol for typed responses
+- [ ] Support additional data types (hashes, sorted sets)
+- [ ] Connection pooling in the client
+- [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
