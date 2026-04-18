@@ -60,3 +60,8 @@ The server listens on port `6379` by default.
 - [ ] Implement RESP-inspired wire protocol for typed responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
 - [ ] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
 - [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
+
+
+## Related
+[baby-redis-client](https://github.com/Mariusflores/baby-redis-client) — Java Library handling socket connections to baby redis server
+[baby-redis-cli](https://github.com/Mariusflores/baby-redis-cli) — Devtool using this library to connect to server and perform command line operations
