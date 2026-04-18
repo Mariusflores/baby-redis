@@ -57,7 +57,6 @@ The server listens on port `6379` by default.
 
 ## Roadmap
 
-- [ ] Implement RESP-inspired wire protocol for typed responses
-- [ ] Support additional data types (hashes, sorted sets)
-- [ ] Connection pooling in the client
+- [ ] Implement RESP-inspired wire protocol for typed responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
+- [ ] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
 - [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
