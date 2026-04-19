@@ -1,6 +1,7 @@
 # baby-redis
 
 ![Build](https://github.com/mariusflores/baby-redis/actions/workflows/build.yml/badge.svg)
+![Docker Pulls](https://img.shields.io/docker/pulls/mfloresdal/baby-redis)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
@@ -23,13 +24,11 @@ systems programming.
 
 ## Project Structure
 
-```
-baby-redis/
-├── server/    # The key-value store server
-```
+The baby-redis ecosystem consists of three independent repositories:
 
-See also: [baby-redis-client](https://github.com/mariusflores/baby-redis-client)
-— the standalone Java client library.
+- [baby-redis](https://github.com/mariusflores/baby-redis) — the server
+- [baby-redis-client](https://github.com/mariusflores/baby-redis-client) — the Java client library
+- [baby-redis-cli](https://github.com/mariusflores/baby-redis-cli) — the command-line interface
 
 ## Getting Started
 
@@ -39,6 +38,7 @@ See also: [baby-redis-client](https://github.com/mariusflores/baby-redis-client)
 - Maven
 
 ## Building & Running the server locally
+
 ### Building
 
 ```bash
@@ -53,6 +53,7 @@ mvn clean package
 ```bash
 java -jar target/baby-redis.jar
 ```
+
 ### Running the Server with docker
 
 ```bash
@@ -71,11 +72,14 @@ The server listens on port `6379` by default.
 
 ## Roadmap
 
-- [ ] Implement RESP-inspired wire protocol for typed responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
+- [ ] Implement RESP-inspired wire protocol for typed
+  responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
 - [x] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
 - [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
 
-
 ## Related
-[baby-redis-client](https://github.com/Mariusflores/baby-redis-client) — Java Library handling socket connections to baby redis server  
-[baby-redis-cli](https://github.com/Mariusflores/baby-redis-cli) — Devtool using this library to connect to server and perform command line operations  
+
+[baby-redis-client](https://github.com/Mariusflores/baby-redis-client) — Java Library handling socket connections to
+baby redis server  
+[baby-redis-cli](https://github.com/Mariusflores/baby-redis-cli) — Devtool using this library to connect to server and
+perform command line operations  
