@@ -1,0 +1,6 @@
+.git
+.github
+.idea
+target
+*.md
+dependency-reduced-pom.xml
