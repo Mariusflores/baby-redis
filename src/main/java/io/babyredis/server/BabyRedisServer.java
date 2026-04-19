@@ -3,20 +3,19 @@ package io.babyredis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.ServerSocket;
+import java.io.File;
+import java.io.IOException;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class BabyRedisServer {
     private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
     private static final Logger log = LoggerFactory.getLogger(BabyRedisServer.class);
+    private final Set<Socket> activeConnections;
 
 
     private final InMemoryStore store = new InMemoryStore(snapshotManager);
@@ -27,6 +26,7 @@ public class BabyRedisServer {
     public BabyRedisServer() throws IOException {
         // Retrieves instigates snapshot retrieval
         readSnapshot();
+        activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
             while (true) {
@@ -76,7 +76,7 @@ public class BabyRedisServer {
         );
     }
 
-    private String delegate(String line) {
+    public String execute(String line) {
         String[] commands = parseOperation(line);
         if (commands.length < 2) {
             return "ERR expected at least <2> arguments";
@@ -181,8 +181,30 @@ public class BabyRedisServer {
         }
     }
 
+    public void addSocket(Socket s) {
+        activeConnections.add(s);
+    }
+
+    public void closeSocket(Socket s) throws IOException {
+        if (activeConnections.contains(s)) {
+            activeConnections.remove(s);
+            s.close();
+        }
+    }
+
     public void close() throws IOException {
         writeSnapshot();
+        closeAllConnections();
+    }
+
+    private void closeAllConnections() {
+        for (Socket s : Set.copyOf(activeConnections)) {
+            try {
+                closeSocket(s);
+            } catch (IOException e) {
+                log.error("Error closing socket", e);
+            }
+        }
     }
 
     private void writeSnapshot() {
@@ -194,82 +216,4 @@ public class BabyRedisServer {
     }
 
 
-    public static void main(String[] args) {
-
-        try (
-                // Create a ServerSocket listening on port 6379
-                ServerSocket ss = new ServerSocket(6379);
-                ExecutorService executor = Executors.newFixedThreadPool(10)
-        ) {
-            BabyRedisServer server = new BabyRedisServer();
-            log.info("Server started listening on port 6379");
-
-            // Shutdown hook to close main.java.org.example.server.Server file writer
-            Thread closeServerHook = new Thread(() -> {
-                try {
-                    server.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            Runtime.getRuntime().addShutdownHook(closeServerHook);
-
-            while (true) {
-
-
-                // Accept a connection from a client
-                Socket s = ss.accept();
-                log.info("Client connected");
-
-                Runnable task = handleClient(s, server);
-
-                executor.submit(task);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static Runnable handleClient(Socket s, BabyRedisServer server) {
-        return () -> {
-            try {
-                // Declare a buffered reader
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-
-                // Declare an Output Writer
-                PrintWriter out = new PrintWriter(
-                        new OutputStreamWriter(s.getOutputStream()), true
-                );
-
-
-                String line;
-
-
-                while ((line = reader.readLine()) != null) {
-                    log.debug("Command: {}", line);
-
-                    if (line.trim().split(" ").length == 1 &&
-                            line.trim().split(" ")[0].equalsIgnoreCase("QUIT")) {
-                        // Close connections
-                        break;
-                    }
-
-                    String result = server.delegate(line);
-
-                    out.println(result);
-
-                }
-
-                reader.close();
-                out.close();
-                s.close();
-
-            } catch (IOException e) {
-                log.error("Client handler error: ", e);
-            }
-
-
-        };
-    }
 }
