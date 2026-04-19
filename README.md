@@ -38,6 +38,7 @@ See also: [baby-redis-client](https://github.com/mariusflores/baby-redis-client)
 - Java 21+
 - Maven
 
+## Building & Running the server locally
 ### Building
 
 ```bash
@@ -47,10 +48,23 @@ mvn clean package
 
 ```
 
-### Running the Server
+### Running the Server with Java
 
 ```bash
 java -jar target/baby-redis.jar
+```
+### Running the Server with docker
+
+```bash
+docker build -t baby-redis .
+docker run -p 6379:6379 baby-redis
+```
+
+### pull directly from Docker Hub:
+
+```bash
+docker pull mfloresdal/baby-redis
+docker run -p 6379:6379 mfloresdal/baby-redis
 ```
 
 The server listens on port `6379` by default.
@@ -58,7 +72,7 @@ The server listens on port `6379` by default.
 ## Roadmap
 
 - [ ] Implement RESP-inspired wire protocol for typed responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
-- [ ] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
+- [x] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
 - [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
 
 
