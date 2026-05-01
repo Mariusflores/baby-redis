@@ -14,6 +14,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+      - name: Install baby-redis-protocol
+        run: |
+          git clone https://github.com/mariusflores/baby-redis-protocol.git
+          cd baby-redis-protocol
+          mvn install -DskipTests
       - name: Build and test
         run: mvn clean verify
 
