@@ -17,6 +17,7 @@ public class ServerLauncher {
         try (
                 // Create a ServerSocket listening on port 6379
                 ServerSocket ss = new ServerSocket(6379);
+                // Create an executor service for handling client execution threads
                 ExecutorService executor = Executors.newFixedThreadPool(10)
         ) {
             BabyRedisServer server = new BabyRedisServer();
@@ -33,7 +34,6 @@ public class ServerLauncher {
             Runtime.getRuntime().addShutdownHook(closeServerHook);
 
             while (true) {
-
 
                 // Accept a connection from a client
                 Socket s = ss.accept();
@@ -63,7 +63,6 @@ public class ServerLauncher {
 
                 String line;
 
-
                 while ((line = reader.readLine()) != null) {
                     log.debug("Command: {}", line);
 
@@ -79,7 +78,9 @@ public class ServerLauncher {
             } catch (IOException e) {
                 log.error("Client handler error: ", e);
             } finally {
+                // Assures socket closes even though exception is thrown
                 try {
+
                     server.closeSocket(s);
                 } catch (IOException e) {
                     log.error("Error closing socket", e);

@@ -43,7 +43,7 @@ public class BabyRedisServer {
         };
         Thread.ofVirtual().start(expireTrack);
 
-        // Sync snapshot every 30 seconds
+        // Daemon thread, Sync snapshot every 30 seconds
         // TODO confirm snapshot throws on error
         Runnable syncSnapshot = () -> {
             while (true) {
@@ -82,7 +82,7 @@ public class BabyRedisServer {
         if (commands.length == 1 && commands[0].equalsIgnoreCase("PING")) {
             return "PONG";
         }
-        
+
         if (commands.length < 2) {
             return "ERR expected at least <2> arguments";
         }
