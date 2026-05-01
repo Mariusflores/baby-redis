@@ -104,7 +104,7 @@ public class BabyRedisServer {
             }
             case "GET" -> {
                 String result = store.get(key);
-                return result == null ? RespEncoder.encodeError("NOT FOUND") : RespEncoder.encodeBulkString(result);
+                return result == null ? RespEncoder.encodeError("ERR Not found") : RespEncoder.encodeBulkString(result);
             }
             case "DELETE" -> {
                 // Delete existing expire countdown
