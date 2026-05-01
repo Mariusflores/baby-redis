@@ -71,7 +71,8 @@ public class ServerLauncher {
                     }
                     String result = server.execute(line);
 
-                    out.println(result);
+                    out.print(result);
+                    out.flush();
 
                 }
 
