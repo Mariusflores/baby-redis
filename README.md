@@ -9,6 +9,11 @@ A from-scratch implementation of a Redis-inspired in-memory key-value store,
 built in Java as a deep dive into network protocols, data structures, and
 systems programming.
 
+## Recent updates
+- **0.3.0**: Added FLUSHDB command with support for full and pattern-based (prefix*) key deletion. Enhanced KEYS command to support prefix-based pattern matching (KEYS prefix*).
+
+-**0.2.0**: Implemented RESP-inspired wire protocol for typed client-server communication.
+
 ## Status
 
 🚧 **In active development.** Core functionality works; ongoing work on persistence.
@@ -21,7 +26,8 @@ systems programming.
     - **Strings:** `GET`, `SET`, `DELETE`
     - **Sets:** `SADD`, `SREM`, `SISMEMBER`, `SMEMBERS`
     - **Expiry:** `EXPIRE`, `TTL`
-    - **Test** `PING`
+    - **Key management:** `KEYS` (supports `*` and `prefix*` patterns), `FLUSHDB` (supports full and pattern-based flush)
+    - **Test:** `PING`
 
 ## Project Structure
 
@@ -78,6 +84,8 @@ The server listens on port `6379` by default.
 - [x] Implement RESP-inspired wire protocol for typed
   responses [#2](https://github.com/Mariusflores/baby-redis/issues/2)
 - [x] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
+- [x] Add FLUSHDB command with pattern-based and full flush support
+- [x] Enhance KEYS command to support prefix-based pattern matching
 - [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
 
 ## Related

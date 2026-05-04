@@ -1,7 +1,9 @@
 package io.babyredis.server.store;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +44,9 @@ public class InMemoryStore {
      */
     public void set(String key, String value) {
         stringStore.put(key, value);
+        
+        // If the key exists in the set store, we should remove it to maintain consistency
+        setStore.remove(key);
     }
 
     /**
@@ -71,6 +76,8 @@ public class InMemoryStore {
      * @param values one or more values to be added to the set associated with the specified key in the in-memory store
      */
     public void sAdd(String key, String... values) {
+        // If the key already exists in the string store, we should remove it to maintain consistency
+        stringStore.remove(key);
         var set = setStore.computeIfAbsent(key, v -> new HashSet<>());
 
         set.addAll(Arrays.asList(values));
@@ -150,4 +157,71 @@ public class InMemoryStore {
 
         return data;
     }
+
+    /***
+     * Retrieves all keys currently stored in the in-memory store, including both string keys and set keys. 
+     * This method iterates through the key sets of both the stringStore and setStore maps, collects all unique keys into a list, 
+     * and returns them as an array of strings. This method can be used to handle the KEYS command in the Baby Redis server, 
+     * allowing clients to retrieve a list of all keys currently stored in memory.
+      *
+      * @param pattern a pattern to match keys against, currently only supports "*" to return all keys, and prefix matching with "prefix*"
+     * @return an array of strings containing all keys currently stored in the in-memory store, including both string keys and set keys
+     */
+
+    public String[] getAllKeysMatchingPattern(String pattern){
+        Set<String> allKeys = new HashSet<>();
+        allKeys.addAll(stringStore.keySet());
+        allKeys.addAll(setStore.keySet());
+
+        List<String> matched = new ArrayList<>();
+
+        if (pattern.equals("*")) {
+            matched.addAll(allKeys);
+        }else if(pattern.endsWith("*")){
+            String prefix = pattern.substring(0, pattern.length() - 1);
+            for(String key : allKeys){
+                if(key.startsWith(prefix)){
+                    matched.add(key);
+                }
+            }
+        }
+
+        // Possibly add more complex regex-based pattern 
+        // matching in the future
+
+        return matched.toArray(new String[0]);
+    }
+
+    /// For testing purposes, we can add a method to 
+    // clear all data from the in-memory store
+
+    public List<String> flushMatchingPattern(String pattern){
+        Set<String> allKeys = new HashSet<>();
+        allKeys.addAll(stringStore.keySet());
+        allKeys.addAll(setStore.keySet());
+
+        List<String> flushedKeys = new ArrayList<>();
+
+        if (pattern.equals("*")) {
+            flushedKeys.addAll(allKeys); // collect all keys before clearing
+
+            setStore.clear();
+            stringStore.clear();
+        }else if(pattern.endsWith("*")){
+            String prefix = pattern.substring(0, pattern.length() - 1);
+            for(String key : allKeys){
+                if(key.startsWith(prefix)){
+                    flushedKeys.add(key);
+                    purge(key);
+
+                }
+            }
+        }
+
+         // Possibly add more complex regex-based pattern 
+         // matching in the future
+
+        return flushedKeys;
+    }
+
 }

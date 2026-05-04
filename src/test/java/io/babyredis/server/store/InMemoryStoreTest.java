@@ -95,4 +95,52 @@ public class InMemoryStoreTest {
         assertTrue(testStore.sMembers(testKey).isEmpty());
     }
 
+    @Test
+    void getAllKeysMatchingPatternReturnsCorrectKeys() {
+        testStore.set("Fruit:Apple", "Red");
+        testStore.set("Fruit:Banana", "Yellow");
+        testStore.set("Veg:Carrot", "Orange");
+        testStore.sAdd("Fruit:Berry", "Blueberry");
+
+        String[] allKeys = testStore.getAllKeysMatchingPattern("*");
+        assertTrue(Set.of(allKeys).containsAll(Set.of("Fruit:Apple", "Fruit:Banana", "Veg:Carrot", "Fruit:Berry")));
+
+        String[] fruitKeys = testStore.getAllKeysMatchingPattern("Fruit:*");
+        assertTrue(Set.of(fruitKeys).containsAll(Set.of("Fruit:Apple", "Fruit:Banana", "Fruit:Berry")));
+        assertFalse(Set.of(fruitKeys).contains("Veg:Carrot"));
+    }
+
+    @Test
+    void flushMatchingPatternRemovesOnlyMatchingKeys() {
+        testStore.set("Fruit:Apple", "Red");
+        testStore.set("Fruit:Banana", "Yellow");
+        testStore.set("Veg:Carrot", "Orange");
+        testStore.sAdd("Fruit:Berry", "Blueberry");
+
+        var flushed = testStore.flushMatchingPattern("Fruit:*");
+        assertTrue(flushed.contains("Fruit:Apple"));
+        assertTrue(flushed.contains("Fruit:Banana"));
+        assertTrue(flushed.contains("Fruit:Berry"));
+        assertFalse(flushed.contains("Veg:Carrot"));
+
+        // Only Veg:Carrot should remain
+        String[] remaining = testStore.getAllKeysMatchingPattern("*");
+        assertArrayEquals(new String[]{"Veg:Carrot"}, remaining);
+    }
+
+    @Test
+    void flushMatchingPatternAllRemovesAllKeys() {
+        testStore.set("A", "1");
+        testStore.set("B", "2");
+        testStore.sAdd("C", "3");
+
+        var flushed = testStore.flushMatchingPattern("*");
+        assertTrue(flushed.contains("A"));
+        assertTrue(flushed.contains("B"));
+        assertTrue(flushed.contains("C"));
+
+        String[] remaining = testStore.getAllKeysMatchingPattern("*");
+        assertEquals(0, remaining.length);
+    }
+
 }
