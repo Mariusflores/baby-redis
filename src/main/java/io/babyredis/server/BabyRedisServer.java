@@ -198,9 +198,9 @@ public class BabyRedisServer {
             case "KEYS" -> {
                 if(commands.length > 2){
                     // For simplicity, only support KEYS * for now
-                    return RespEncoder.encodeError("ERR Unsupported pattern, only KEYS * is supported");
+                    return RespEncoder.encodeError("ERR Unsupported pattern, only KEYS * or KEYS prefix* is supported");
                 }
-                String[] keys = store.getAllKeys();
+                String[] keys = store.getAllKeysMatchingPattern( commands.length == 2 ? commands[1] : "*");
 
                 return RespEncoder.encodeArray(keys);
             }
