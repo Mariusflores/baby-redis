@@ -9,6 +9,11 @@ A from-scratch implementation of a Redis-inspired in-memory key-value store,
 built in Java as a deep dive into network protocols, data structures, and
 systems programming.
 
+## Recent updates
+- **0.3.0**: Added FLUSHDB command with support for full and pattern-based (prefix*) key deletion. Enhanced KEYS command to support prefix-based pattern matching (KEYS prefix*).
+
+-**0.2.0**: Implemented RESP-inspired wire protocol for typed client-server communication.
+
 ## Status
 
 🚧 **In active development.** Core functionality works; ongoing work on persistence.
