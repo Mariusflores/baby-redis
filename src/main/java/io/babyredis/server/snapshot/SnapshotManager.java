@@ -1,4 +1,4 @@
-package io.babyredis.server;
+package io.babyredis.server.snapshot;
 
 import java.io.*;
 import java.util.*;

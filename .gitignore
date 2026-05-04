@@ -29,6 +29,8 @@ bin/
 ### Mac OS ###
 .DS_Store
 /baby_redis.iml
+
+### Common ###
 /.idea/
 /target/
 snapshot.txt

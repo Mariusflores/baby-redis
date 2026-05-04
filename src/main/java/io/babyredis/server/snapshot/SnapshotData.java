@@ -1,4 +1,4 @@
-package io.babyredis.server;
+package io.babyredis.server.snapshot;
 
 import java.util.Map;
 import java.util.Set;

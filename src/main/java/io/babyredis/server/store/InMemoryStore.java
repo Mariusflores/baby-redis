@@ -1,10 +1,13 @@
-package io.babyredis.server;
+package io.babyredis.server.store;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.babyredis.server.snapshot.SnapshotData;
+import io.babyredis.server.snapshot.SnapshotManager;
 
 /**
  * A simple in-memory store for handling string and set operations.
