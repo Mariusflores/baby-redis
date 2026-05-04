@@ -1,5 +1,6 @@
 package io.babyredis.server;
 
+import io.babyredis.error.BabyRedisException;
 import io.babyredis.protocol.RespEncoder;
 import io.babyredis.server.snapshot.SnapshotData;
 import io.babyredis.server.snapshot.SnapshotManager;
@@ -43,7 +44,9 @@ public class BabyRedisServer {
                     expireQueueState.remove(key.getKey());
 
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    throw new BabyRedisException(
+                        "Error occurred while tracking expired keys", 
+                        e);
                 }
             }
         };
@@ -58,7 +61,10 @@ public class BabyRedisServer {
 
                     writeSnapshot();
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    throw new BabyRedisException(
+                        "Error occurred while syncing snapshot", 
+                        e
+                    );
                 }
             }
 
