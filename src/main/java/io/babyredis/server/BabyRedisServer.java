@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -203,6 +204,26 @@ public class BabyRedisServer {
                 String[] keys = store.getAllKeysMatchingPattern( commands.length == 2 ? commands[1] : "*");
 
                 return RespEncoder.encodeArray(keys);
+            }
+
+            case "FLUSHDB" -> {
+
+                String pattern = "*";
+
+                if(commands.length == 2){
+                    pattern = commands[1];
+                }
+
+                // Clear store
+                List <String > flushedKeys = store.flushMatchingPattern(pattern);
+                // Clear expire queue and state
+
+                for(String flushedKey : flushedKeys){
+                    expireQueue.removeIf(k -> k.getKey().equals(flushedKey));
+                    expireQueueState.remove(flushedKey);
+                }
+
+                return RespEncoder.encodeString("OK");
             }
 
             default -> {

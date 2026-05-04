@@ -189,8 +189,39 @@ public class InMemoryStore {
         // Possibly add more complex regex-based pattern 
         // matching in the future
 
-
         return matched.toArray(new String[0]);
+    }
+
+    /// For testing purposes, we can add a method to 
+    // clear all data from the in-memory store
+
+    public List<String> flushMatchingPattern(String pattern){
+        Set<String> allKeys = new HashSet<>();
+        allKeys.addAll(stringStore.keySet());
+        allKeys.addAll(setStore.keySet());
+
+        List<String> flushedKeys = new ArrayList<>();
+
+        if (pattern.equals("*")) {
+            flushedKeys.addAll(allKeys); // collect all keys before clearing
+
+            setStore.clear();
+            stringStore.clear();
+        }else if(pattern.endsWith("*")){
+            String prefix = pattern.substring(0, pattern.length() - 1);
+            for(String key : allKeys){
+                if(key.startsWith(prefix)){
+                    flushedKeys.add(key);
+                    purge(key);
+
+                }
+            }
+        }
+
+         // Possibly add more complex regex-based pattern 
+         // matching in the future
+
+        return flushedKeys;
     }
 
 }
