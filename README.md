@@ -12,11 +12,11 @@ systems programming.
 ## Recent updates
 - **0.3.0**: Added FLUSHDB command with support for full and pattern-based (prefix*) key deletion. Enhanced KEYS command to support prefix-based pattern matching (KEYS prefix*).
 
--**0.2.0**: Implemented RESP-inspired wire protocol for typed client-server communication.
+- **0.2.0**: Implemented RESP-inspired wire protocol for typed client-server communication.
 
 ## Status
 
-🚧 **In active development.** Core functionality works; ongoing work on persistence.
+🚧 **In active development.** Core functionality and persistance works. Working on expanding method catalog
 
 ## Features
 
@@ -86,7 +86,8 @@ The server listens on port `6379` by default.
 - [x] Add Logging framework [#3](https://github.com/Mariusflores/baby-redis/issues/3)
 - [x] Add FLUSHDB command with pattern-based and full flush support
 - [x] Enhance KEYS command to support prefix-based pattern matching
-- [ ] Build personal tools on top of the ecosystem (expense tracker, dashboard)
+- [x] Build personal tools on top of the ecosystem (expense tracker, dashboard)
+- [ ] Introduce KeyValueStore interface
 
 ## Related
 
@@ -95,3 +96,7 @@ The server listens on port `6379` by default.
 - [baby-redis-cli](https://github.com/Mariusflores/baby-redis-cli) — Devtool using this library to connect to server and
   perform command line operations
 - [baby-redis-protocol](https://github.com/mariusflores/baby-redis-protocol) — shared RESP protocol library
+- [expense-tracker](https://github.com/mariusflores/expense-tracker) — a personal tool to track economy and spending trends. Uses baby-redis for data storage.
+- [energy-monitor](https://github.com/mariusflores/energy-monitor) — a personal tool to show energy-prices taken from public API. still early development. Uses baby-redis to cache energy-price data
+  
+
