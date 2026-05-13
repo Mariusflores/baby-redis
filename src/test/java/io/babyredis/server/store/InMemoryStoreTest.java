@@ -2,20 +2,14 @@ package io.babyredis.server.store;
 
 import org.junit.jupiter.api.Test;
 
-import io.babyredis.server.persistence.SnapshotManager;
-
-import java.io.File;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemoryStoreTest {
 
-    private final File testFile = new File("test.txt");
-    SnapshotManager testManager = new SnapshotManager(testFile);
-
-    InMemoryStore testStore = new InMemoryStore(testManager);
-
+    InMemoryStore testStore = new InMemoryStore();
 
     @Test
     void setUpdatesGetRetrieves() {
@@ -143,4 +137,59 @@ public class InMemoryStoreTest {
         assertEquals(0, remaining.length);
     }
 
+    @Test
+    void exportStateReturnsCurrentData() {
+        testStore.set("name", "alice");
+        testStore.sAdd("fruits", "apple", "banana");
+
+        StoreState state = testStore.exportState();
+
+        assertEquals("alice", state.stringStore().get("name"));
+        assertEquals(Set.of("apple", "banana"), state.setStore().get("fruits"));
+    }
+
+    @Test
+    void exportStateReturnsDefensiveCopy() {
+        testStore.set("key", "value");
+
+        StoreState state = testStore.exportState();
+
+        // Mutating the exported state should not affect the store
+        assertThrows(UnsupportedOperationException.class, () ->
+                state.stringStore().put("injected", "bad"));
+
+        assertEquals("value", testStore.get("key"));
+    }
+
+    @Test
+    void loadStateReplacesExistingData() {
+        testStore.set("old", "data");
+        testStore.sAdd("oldSet", "member");
+
+        StoreState newState = new StoreState(
+                Map.of("new", "data"),
+                Map.of("newSet", Set.of("member1", "member2"))
+        );
+
+        testStore.loadState(newState);
+
+        assertNull(testStore.get("old"));
+        assertTrue(testStore.sMembers("oldSet").isEmpty());
+        assertEquals("data", testStore.get("new"));
+        assertEquals(Set.of("member1", "member2"), testStore.sMembers("newSet"));
+    }
+
+    @Test
+    void loadStateThenExportStateRoundTrips() {
+        StoreState original = new StoreState(
+                Map.of("a", "1", "b", "2"),
+                Map.of("s", Set.of("x", "y"))
+        );
+
+        testStore.loadState(original);
+        StoreState exported = testStore.exportState();
+
+        assertEquals(original.stringStore(), exported.stringStore());
+        assertEquals(original.setStore(), exported.setStore());
+    }
 }
