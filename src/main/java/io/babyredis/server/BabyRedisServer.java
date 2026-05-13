@@ -2,8 +2,8 @@ package io.babyredis.server;
 
 import io.babyredis.error.BabyRedisException;
 import io.babyredis.protocol.RespEncoder;
-import io.babyredis.server.snapshot.SnapshotData;
-import io.babyredis.server.snapshot.SnapshotManager;
+import io.babyredis.server.persistence.SnapshotData;
+import io.babyredis.server.persistence.SnapshotManager;
 import io.babyredis.server.store.ExpiringKey;
 import io.babyredis.server.store.InMemoryStore;
 
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
 public class BabyRedisServer {
-    private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
+    private final SnapshotManager snapshotManager = new SnapshotManager(new File("./persistence/snapshot.txt"));
     private static final Logger log = LoggerFactory.getLogger(BabyRedisServer.class);
     private final Set<Socket> activeConnections;
 

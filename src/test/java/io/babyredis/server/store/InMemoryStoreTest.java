@@ -2,7 +2,7 @@ package io.babyredis.server.store;
 
 import org.junit.jupiter.api.Test;
 
-import io.babyredis.server.snapshot.SnapshotManager;
+import io.babyredis.server.persistence.SnapshotManager;
 
 import java.io.File;
 import java.util.Set;

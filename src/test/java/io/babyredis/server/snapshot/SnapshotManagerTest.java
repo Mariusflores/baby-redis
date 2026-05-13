@@ -3,6 +3,9 @@ package io.babyredis.server.snapshot;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
+import io.babyredis.server.persistence.SnapshotData;
+import io.babyredis.server.persistence.SnapshotManager;
+
 import java.io.File;
 import java.util.Map;
 import java.util.Set;
@@ -42,11 +45,11 @@ public class SnapshotManagerTest {
                 "name", System.currentTimeMillis() + 60000L
         );
 
-        manager.write(strings, sets, expiry);
+        manager.save(strings, sets, expiry);
 
         assertTrue(testFile.exists());
 
-        SnapshotData snapshot = manager.read();
+        SnapshotData snapshot = manager.load();
 
         assertEquals(snapshot.stringSnapshot(), strings);
         assertEquals(snapshot.setSnapshot(), sets);

@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import io.babyredis.server.snapshot.SnapshotData;
-import io.babyredis.server.snapshot.SnapshotManager;
+import io.babyredis.server.persistence.SnapshotData;
+import io.babyredis.server.persistence.SnapshotManager;
 
 /**
  * A simple in-memory store for handling string and set operations.
@@ -141,7 +141,7 @@ public class InMemoryStore {
      * @param expiryMap a map of expiring keys with their corresponding expiration timestamps to be included in the snapshot of the in-memory store
      */
     public void writeSnapshot(Map<String, Long> expiryMap) {
-        snapshotManager.write(Map.copyOf(stringStore), Map.copyOf(setStore), expiryMap);
+        snapshotManager.save(Map.copyOf(stringStore), Map.copyOf(setStore), expiryMap);
     }
 
     /**
@@ -150,7 +150,7 @@ public class InMemoryStore {
      * @return a SnapshotData record containing the restored state of the in-memory store, including string key-value pairs, sets, and expiring keys, read from the snapshot file
      */
     public SnapshotData readSnapshot() {
-        SnapshotData data = snapshotManager.read();
+        SnapshotData data = snapshotManager.load();
 
         stringStore.putAll(data.stringSnapshot());
         setStore.putAll(data.setSnapshot());
