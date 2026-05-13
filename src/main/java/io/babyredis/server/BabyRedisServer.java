@@ -6,6 +6,7 @@ import io.babyredis.server.persistence.SnapshotData;
 import io.babyredis.server.persistence.SnapshotManager;
 import io.babyredis.server.store.ExpiringKey;
 import io.babyredis.server.store.InMemoryStore;
+import io.babyredis.server.store.StoreState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,14 +27,14 @@ public class BabyRedisServer {
     private final Set<Socket> activeConnections;
 
 
-    private final InMemoryStore store = new InMemoryStore(snapshotManager);
+    private final InMemoryStore store = new InMemoryStore();
     private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
 
     public BabyRedisServer() throws IOException {
         // Retrieves instigates snapshot retrieval
-        readSnapshot();
+        loadSnapshot();
         activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
@@ -60,7 +61,7 @@ public class BabyRedisServer {
                 try {
                     Thread.sleep(30000);
 
-                    writeSnapshot();
+                    saveSnapshot();
                 } catch (InterruptedException e) {
                     throw new BabyRedisException(
                         "Error occurred while syncing snapshot", 
@@ -72,15 +73,6 @@ public class BabyRedisServer {
         };
 
         Thread.ofVirtual().start(syncSnapshot);
-    }
-
-    private void readSnapshot() {
-
-        SnapshotData snapshot = store.readSnapshot();
-
-        expireQueueState.putAll(snapshot.expiryQueueSnapshot());
-
-        loadExpireQueue();
     }
 
     private void loadExpireQueue() {
@@ -244,7 +236,7 @@ public class BabyRedisServer {
     }
 
     public void close() throws IOException {
-        writeSnapshot();
+        saveSnapshot();
         closeAllConnections();
     }
 
@@ -258,13 +250,23 @@ public class BabyRedisServer {
         }
     }
 
-    private void writeSnapshot() {
-        store.writeSnapshot(Map.copyOf(expireQueueState));
+    private void loadSnapshot() {
+
+        SnapshotData snapshot = snapshotManager.load();
+        store.loadState(new StoreState(snapshot.stringSnapshot(), snapshot.setSnapshot()));
+
+        expireQueueState.putAll(snapshot.expiryQueueSnapshot());
+
+        loadExpireQueue();
+    }
+
+    private void saveSnapshot() {
+        StoreState state = store.exportState();
+         snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)));
     }
 
     private String[] parseOperation(String line) {
         return line.trim().split(" ");
     }
-
 
 }
