@@ -34,4 +34,5 @@ bin/
 /.idea/
 /target/
 persistence/
+breadcrumbs.md
 /dependency-reduced-pom.xml
