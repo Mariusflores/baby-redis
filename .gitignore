@@ -33,6 +33,6 @@ bin/
 ### Common ###
 /.idea/
 /target/
-persistence/
+persistence/*.txt
 breadcrumbs.md
 /dependency-reduced-pom.xml
