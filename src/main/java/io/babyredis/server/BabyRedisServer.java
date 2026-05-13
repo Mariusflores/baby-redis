@@ -3,7 +3,7 @@ package io.babyredis.server;
 import io.babyredis.error.BabyRedisException;
 import io.babyredis.protocol.RespEncoder;
 import io.babyredis.server.persistence.SnapshotData;
-import io.babyredis.server.persistence.SnapshotManager;
+import io.babyredis.server.persistence.SnapshotPersistence;
 import io.babyredis.server.store.ExpiringKey;
 import io.babyredis.server.store.InMemoryStore;
 import io.babyredis.server.store.StoreState;
@@ -11,7 +11,6 @@ import io.babyredis.server.store.StoreState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
@@ -22,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
 public class BabyRedisServer {
-    private final SnapshotManager snapshotManager = new SnapshotManager(new File("./persistence/snapshot.txt"));
+    private final SnapshotPersistence snapshotManager;
     private static final Logger log = LoggerFactory.getLogger(BabyRedisServer.class);
     private final Set<Socket> activeConnections;
 
@@ -32,8 +31,12 @@ public class BabyRedisServer {
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
 
-    public BabyRedisServer() throws IOException {
+    public BabyRedisServer(
+        SnapshotPersistence snapshotManager
+
+    ) throws IOException {
         // Retrieves instigates snapshot retrieval
+        this.snapshotManager = snapshotManager;
         loadSnapshot();
         activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
