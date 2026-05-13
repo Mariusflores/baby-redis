@@ -33,5 +33,5 @@ bin/
 ### Common ###
 /.idea/
 /target/
-snapshot.txt
+./persistence/
 /dependency-reduced-pom.xml
