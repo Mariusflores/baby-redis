@@ -4,9 +4,15 @@ import java.io.*;
 import java.util.*;
 
 /**
- * Manages the snapshotting of the Baby Redis server's in-memory data to a file and reading it back during server startup.
- * The SnapshotManager class provides methods to write the current state of the in-memory store (including string key-value pairs, sets, and expiring keys) to a snapshot file and to read the snapshot file to restore the in-memory state when the server starts.
- * The snapshot file is written in a simple text format, with sections for strings, sets, and expiring keys, allowing for easy serialization and deserialization of the server's state.
+ * Manages the snapshotting of the Baby Redis server's in-memory data to a file
+ * and reading it back during server startup.
+ * The SnapshotManager class provides methods to write the current state of the
+ * in-memory store (including string key-value pairs, sets, and expiring keys)
+ * to a snapshot file and to read the snapshot file to restore the in-memory
+ * state when the server starts.
+ * The snapshot file is written in a simple text format, with sections for
+ * strings, sets, and expiring keys, allowing for easy serialization and
+ * deserialization of the server's state.
  */
 public class SnapshotManager implements SnapshotPersistence {
 
@@ -15,34 +21,48 @@ public class SnapshotManager implements SnapshotPersistence {
     private final static String SET_SECTION = "SET";
     private final static String EXPIRE_SECTION = "EXPIRE";
 
-    private int lastSequence = 0; // Placeholder for tracking the last sequence number associated with the snapshot, if needed for future enhancements to support sequence tracking.
+    private int lastSequence = 0; // Placeholder for tracking the last sequence number associated with the
+                                  // snapshot, if needed for future enhancements to support sequence tracking.
 
     /**
-     * Constructs a new SnapshotManager with the specified snapshot file. The snapshot file is used to store the serialized state of the Baby Redis server's in-memory data, including string key-value pairs, sets, and expiring keys. The SnapshotManager provides methods to write the current state to the snapshot file and to read the snapshot file to restore the in-memory state during server startup.
+     * Constructs a new SnapshotManager with the specified snapshot file. The
+     * snapshot file is used to store the serialized state of the Baby Redis
+     * server's in-memory data, including string key-value pairs, sets, and expiring
+     * keys. The SnapshotManager provides methods to write the current state to the
+     * snapshot file and to read the snapshot file to restore the in-memory state
+     * during server startup.
      *
-     * @param file the file to be used for storing the snapshot of the Baby Redis server's in-memory data
+     * @param file the file to be used for storing the snapshot of the Baby Redis
+     *             server's in-memory data
      */
     public SnapshotManager(File file) {
         snapshotFile = file;
     }
 
     /**
-     * Writes the current state of the Baby Redis server's in-memory data to the snapshot file. This method takes three parameters: a map of string key-value pairs representing the string data, a map of sets representing the set data, and a map of expiring keys with their corresponding expiration timestamps. The method serializes this data into a simple text format, with sections for strings, sets, and expiring keys, and writes it to a temporary file. Once the writing is complete, the temporary file is renamed to the snapshot file, ensuring that the snapshot is saved atomically.
+     * Writes the current state of the Baby Redis server's in-memory data to the
+     * snapshot file. This method takes three parameters: a map of string key-value
+     * pairs representing the string data, a map of sets representing the set data,
+     * and a map of expiring keys with their corresponding expiration timestamps.
+     * The method serializes this data into a simple text format, with sections for
+     * strings, sets, and expiring keys, and writes it to a temporary file. Once the
+     * writing is complete, the temporary file is renamed to the snapshot file,
+     * ensuring that the snapshot is saved atomically.
      *
      * @param snapshotData the snapshot data to be saved
-     * @param sequence the sequence number for the snapshot
+     * @param sequence     the sequence number for the snapshot
      */
     @Override
     public void save(
-            SnapshotData snapshotData, 
-            int sequence
-        ) {
-        File temp = new File("persistence/snapshot_temp.txt");
+            SnapshotData snapshotData,
+            int sequence) {
+        File temp = new File(snapshotFile.getParent(), "snapshot_temp.txt");
         try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(temp))) {
 
-            lastSequence = sequence; // Update the last sequence number associated with the snapshot, if needed for future enhancements to support sequence tracking.
-            
-            fileWriter.write(String.format("SEQUENCE=%d\n", sequence)); 
+            lastSequence = sequence; // Update the last sequence number associated with the snapshot, if needed for
+                                     // future enhancements to support sequence tracking.
+
+            fileWriter.write(String.format("SEQUENCE=%d\n", sequence));
             fileWriter.write(STRING_SECTION + "\n");
             for (Map.Entry<String, String> entry : snapshotData.stringSnapshot().entrySet()) {
                 fileWriter.write(String.format("%s=%s\n", entry.getKey(), entry.getValue()));
@@ -59,7 +79,6 @@ public class SnapshotManager implements SnapshotPersistence {
 
             fileWriter.flush();
 
-
             if (snapshotFile.exists()) {
                 snapshotFile.delete();
             }
@@ -71,9 +90,19 @@ public class SnapshotManager implements SnapshotPersistence {
     }
 
     /**
-     * Reads the snapshot file and restores the state of the Baby Redis server's in-memory data. This method reads the snapshot file, which is expected to be in a specific text format with sections for strings, sets, and expiring keys. It parses the file line by line, identifying the current section (STRING, SET, or EXPIRE) and populating the corresponding data structures (maps for strings and sets, and a map for expiring keys) based on the content of each line. Once the entire file has been read and parsed, it returns a SnapshotData record containing the restored state of the in-memory data, which can then be used to initialize the server's state during startup.
+     * Reads the snapshot file and restores the state of the Baby Redis server's
+     * in-memory data. This method reads the snapshot file, which is expected to be
+     * in a specific text format with sections for strings, sets, and expiring keys.
+     * It parses the file line by line, identifying the current section (STRING,
+     * SET, or EXPIRE) and populating the corresponding data structures (maps for
+     * strings and sets, and a map for expiring keys) based on the content of each
+     * line. Once the entire file has been read and parsed, it returns a
+     * SnapshotData record containing the restored state of the in-memory data,
+     * which can then be used to initialize the server's state during startup.
      *
-     * @return a SnapshotData record containing the restored state of the in-memory data, including string key-value pairs, sets, and expiring keys, read from the snapshot file
+     * @return a SnapshotData record containing the restored state of the in-memory
+     *         data, including string key-value pairs, sets, and expiring keys, read
+     *         from the snapshot file
      */
     @Override
     public SnapshotData load() {
@@ -82,7 +111,8 @@ public class SnapshotManager implements SnapshotPersistence {
         Map<String, Set<String>> setSnapshot = new HashMap<>();
         Map<String, Long> expiryQueueSnapshot = new HashMap<>();
 
-        // If the snapshot file does not exist, return an empty SnapshotData record with empty maps for strings, sets, and expiring keys.
+        // If the snapshot file does not exist, return an empty SnapshotData record with
+        // empty maps for strings, sets, and expiring keys.
         if (!snapshotFile.exists()) {
             return new SnapshotData(new HashMap<>(), new HashMap<>(), new HashMap<>());
         }
@@ -93,7 +123,7 @@ public class SnapshotManager implements SnapshotPersistence {
 
             while ((line = reader.readLine()) != null) {
 
-                if(line.startsWith("SEQUENCE=")) {
+                if (line.startsWith("SEQUENCE=")) {
                     String[] parts = line.split("=", 2);
                     if (parts.length == 2) {
                         try {
@@ -103,18 +133,28 @@ public class SnapshotManager implements SnapshotPersistence {
                             lastSequence = 0; // Default to 0 if parsing fails
                         }
                     }
-                    continue; // Skip processing this line further, as it is only used to set the last sequence number.
+                    continue; // Skip processing this line further, as it is only used to set the last
+                              // sequence number.
                 }
-                // Identify the current section based on the line content. If the line matches "STRING", "SET", or "EXPIRE", update the section variable accordingly and continue to the next iteration to read the data lines for that section.
+                // Identify the current section based on the line content. If the line matches
+                // "STRING", "SET", or "EXPIRE", update the section variable accordingly and
+                // continue to the next iteration to read the data lines for that section.
                 if (line.equalsIgnoreCase(STRING_SECTION) ||
                         line.equalsIgnoreCase(SET_SECTION) ||
                         line.equalsIgnoreCase(EXPIRE_SECTION)) {
                     section = line;
-                    // Continue to the next iteration to avoid processing the section header line as data.  
+                    // Continue to the next iteration to avoid processing the section header line as
+                    // data.
                     continue;
                 }
 
-                // Based on the current section, parse the line to extract the relevant data and populate the corresponding data structures (stringSnapshot for STRING section, setSnapshot for SET section, and expiryQueueSnapshot for EXPIRE section). The line is expected to be in a specific format (e.g., "key=value" for strings, "key=[val1,val2]" for sets, and "key=timestamp" for expiring keys), and the method uses string manipulation to extract the key and value(s) accordingly.
+                // Based on the current section, parse the line to extract the relevant data and
+                // populate the corresponding data structures (stringSnapshot for STRING
+                // section, setSnapshot for SET section, and expiryQueueSnapshot for EXPIRE
+                // section). The line is expected to be in a specific format (e.g., "key=value"
+                // for strings, "key=[val1,val2]" for sets, and "key=timestamp" for expiring
+                // keys), and the method uses string manipulation to extract the key and
+                // value(s) accordingly.
                 switch (section.toUpperCase()) {
                     case "STRING" -> {
                         String[] parts = split(line);
@@ -125,7 +165,8 @@ public class SnapshotManager implements SnapshotPersistence {
                         String[] parts = split(line);
                         String key = parts[0];
                         String[] values = parts[1].substring(1, parts[1].length() - 1).split(",");
-                        Set<String> valueSet = (values.length == 1 && values[0].isEmpty()) ? new HashSet<>() : new HashSet<>(Arrays.asList(values));
+                        Set<String> valueSet = (values.length == 1 && values[0].isEmpty()) ? new HashSet<>()
+                                : new HashSet<>(Arrays.asList(values));
 
                         setSnapshot.put(key, valueSet);
                     }
@@ -143,14 +184,23 @@ public class SnapshotManager implements SnapshotPersistence {
         return new SnapshotData(stringSnapshot, setSnapshot, expiryQueueSnapshot);
     }
 
-    // Helper method to split a line into key and value parts based on the first occurrence of the "=" character. This method is used to parse lines in the snapshot file that are expected to be in the format "key=value". It trims the line and splits it into two parts: the key (everything before the "=") and the value (everything after the "="). The method returns an array containing the key and value as separate elements.
+    // Helper method to split a line into key and value parts based on the first
+    // occurrence of the "=" character. This method is used to parse lines in the
+    // snapshot file that are expected to be in the format "key=value". It trims the
+    // line and splits it into two parts: the key (everything before the "=") and
+    // the value (everything after the "="). The method returns an array containing
+    // the key and value as separate elements.
     private String[] split(String line) {
         return line.trim().split("=", 2);
     }
 
     @Override
     public int getLastSequence() {
-        // Implementation to return the last sequence number associated with the snapshot, if applicable. This method can be used to track the sequence number of the last snapshot saved, which can be useful for determining which commands from the AOF log need to be replayed during server startup to restore the state to the point of the last snapshot.
+        // Implementation to return the last sequence number associated with the
+        // snapshot, if applicable. This method can be used to track the sequence number
+        // of the last snapshot saved, which can be useful for determining which
+        // commands from the AOF log need to be replayed during server startup to
+        // restore the state to the point of the last snapshot.
         return lastSequence; // Return the last sequence number associated with the snapshot
     }
 }
