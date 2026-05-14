@@ -76,7 +76,7 @@ public class ServerLauncher {
                     if (line.trim().equalsIgnoreCase("QUIT")) {
                         break;
                     }
-                    String result = server.execute(line);
+                    String result = server.executeCommand(line);
 
                     out.print(result);
                     out.flush();
