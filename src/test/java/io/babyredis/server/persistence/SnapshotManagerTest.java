@@ -40,7 +40,7 @@ public class SnapshotManagerTest {
                 "name", System.currentTimeMillis() + 60000L
         );
 
-        manager.save(new SnapshotData(strings, sets, expiry));
+        manager.save(new SnapshotData(strings, sets, expiry), 0);
 
         assertTrue(testFile.exists());
 
@@ -53,7 +53,6 @@ public class SnapshotManagerTest {
 
     @Test
     void loadFromNonExistentFileReturnsEmptyData() {
-        // File doesn't exist — load should return empty maps, not throw
         SnapshotData snapshot = manager.load();
 
         assertTrue(snapshot.stringSnapshot().isEmpty());
@@ -67,7 +66,7 @@ public class SnapshotManagerTest {
                 new HashMap<>(),
                 new HashMap<>(),
                 new HashMap<>()
-        ));
+        ), 0);
 
         SnapshotData snapshot = manager.load();
 
@@ -82,13 +81,13 @@ public class SnapshotManagerTest {
                 Map.of("old", "data"),
                 new HashMap<>(),
                 new HashMap<>()
-        ));
+        ), 1);
 
         manager.save(new SnapshotData(
                 Map.of("new", "data"),
                 new HashMap<>(),
                 new HashMap<>()
-        ));
+        ), 2);
 
         SnapshotData snapshot = manager.load();
 
@@ -98,15 +97,34 @@ public class SnapshotManagerTest {
 
     @Test
     void valueContainingEqualsSignPreserved() {
-        // Values with '=' (like URLs or base64) must survive the split("=", 2) parsing
         manager.save(new SnapshotData(
                 Map.of("url", "https://example.com?a=1&b=2"),
                 new HashMap<>(),
                 new HashMap<>()
-        ));
+        ), 0);
 
         SnapshotData snapshot = manager.load();
 
         assertEquals("https://example.com?a=1&b=2", snapshot.stringSnapshot().get("url"));
+    }
+
+    @Test
+    void sequenceNumberRoundTrips() {
+        manager.save(new SnapshotData(
+                Map.of("key", "value"),
+                new HashMap<>(),
+                new HashMap<>()
+        ), 42);
+
+        manager.load();
+
+        assertEquals(42, manager.getLastSequence());
+    }
+
+    @Test
+    void sequenceDefaultsToZeroWhenFileDoesNotExist() {
+        manager.load();
+
+        assertEquals(0, manager.getLastSequence());
     }
 }

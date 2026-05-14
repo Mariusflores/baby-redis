@@ -15,6 +15,8 @@ public class SnapshotManager implements SnapshotPersistence {
     private final static String SET_SECTION = "SET";
     private final static String EXPIRE_SECTION = "EXPIRE";
 
+    private int lastSequence = 0; // Placeholder for tracking the last sequence number associated with the snapshot, if needed for future enhancements to support sequence tracking.
+
     /**
      * Constructs a new SnapshotManager with the specified snapshot file. The snapshot file is used to store the serialized state of the Baby Redis server's in-memory data, including string key-value pairs, sets, and expiring keys. The SnapshotManager provides methods to write the current state to the snapshot file and to read the snapshot file to restore the in-memory state during server startup.
      *
@@ -27,16 +29,20 @@ public class SnapshotManager implements SnapshotPersistence {
     /**
      * Writes the current state of the Baby Redis server's in-memory data to the snapshot file. This method takes three parameters: a map of string key-value pairs representing the string data, a map of sets representing the set data, and a map of expiring keys with their corresponding expiration timestamps. The method serializes this data into a simple text format, with sections for strings, sets, and expiring keys, and writes it to a temporary file. Once the writing is complete, the temporary file is renamed to the snapshot file, ensuring that the snapshot is saved atomically.
      *
-     * @param stringSnapshot a map of string key-value pairs representing the string data to be snapshotted
-     * @param setSnapshot    a map of sets representing the set data to be snapshotted
-     * @param expiryQueue    a map of expiring keys with their corresponding expiration timestamps to be snapshotted
+     * @param snapshotData the snapshot data to be saved
+     * @param sequence the sequence number for the snapshot
      */
     @Override
     public void save(
-            SnapshotData snapshotData) {
+            SnapshotData snapshotData, 
+            int sequence
+        ) {
         File temp = new File("persistence/snapshot_temp.txt");
         try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(temp))) {
 
+            lastSequence = sequence; // Update the last sequence number associated with the snapshot, if needed for future enhancements to support sequence tracking.
+            
+            fileWriter.write(String.format("SEQUENCE=%d\n", sequence)); 
             fileWriter.write(STRING_SECTION + "\n");
             for (Map.Entry<String, String> entry : snapshotData.stringSnapshot().entrySet()) {
                 fileWriter.write(String.format("%s=%s\n", entry.getKey(), entry.getValue()));
@@ -86,6 +92,19 @@ public class SnapshotManager implements SnapshotPersistence {
             String section = "";
 
             while ((line = reader.readLine()) != null) {
+
+                if(line.startsWith("SEQUENCE=")) {
+                    String[] parts = line.split("=", 2);
+                    if (parts.length == 2) {
+                        try {
+                            lastSequence = Integer.parseInt(parts[1]);
+                        } catch (NumberFormatException e) {
+                            // Handle the case where the sequence number is not a valid integer
+                            lastSequence = 0; // Default to 0 if parsing fails
+                        }
+                    }
+                    continue; // Skip processing this line further, as it is only used to set the last sequence number.
+                }
                 // Identify the current section based on the line content. If the line matches "STRING", "SET", or "EXPIRE", update the section variable accordingly and continue to the next iteration to read the data lines for that section.
                 if (line.equalsIgnoreCase(STRING_SECTION) ||
                         line.equalsIgnoreCase(SET_SECTION) ||
@@ -127,5 +146,11 @@ public class SnapshotManager implements SnapshotPersistence {
     // Helper method to split a line into key and value parts based on the first occurrence of the "=" character. This method is used to parse lines in the snapshot file that are expected to be in the format "key=value". It trims the line and splits it into two parts: the key (everything before the "=") and the value (everything after the "="). The method returns an array containing the key and value as separate elements.
     private String[] split(String line) {
         return line.trim().split("=", 2);
+    }
+
+    @Override
+    public int getLastSequence() {
+        // Implementation to return the last sequence number associated with the snapshot, if applicable. This method can be used to track the sequence number of the last snapshot saved, which can be useful for determining which commands from the AOF log need to be replayed during server startup to restore the state to the point of the last snapshot.
+        return lastSequence; // Return the last sequence number associated with the snapshot
     }
 }

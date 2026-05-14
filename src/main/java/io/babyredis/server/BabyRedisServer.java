@@ -37,7 +37,7 @@ public class BabyRedisServer {
         // Retrieves instigates snapshot retrieval
         this.snapshotManager = snapshotManager;
         this.aofManager = aofManager;
-        loadSnapshot();
+        replayState();
         activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
@@ -81,7 +81,13 @@ public class BabyRedisServer {
         expireQueueState.forEach((k, v) -> expireQueue.add(new ExpiringKey(k, v)));
     }
 
+    // Method for executing commands, takes a command line string as input and returns the response string. The method parses the command line, identifies the operation and its arguments, and performs the corresponding action on the in-memory store. It also handles logging of commands to the AOF file for persistence and returns appropriate responses based on the command execution results.
     public String execute(String line) {
+        return execute(line, false);
+    }
+
+    // Overloaded execute method for AOF replay, takes an additional boolean parameter to indicate whether the command is being executed as part of AOF replay. This allows for different handling of commands during normal execution versus AOF replay, such as skipping AOF logging during replay to avoid duplicate entries in the AOF file.
+    public String execute(String line, boolean isAOFReplay) {
         String[] commands = parseOperation(line);
 
         if (commands.length == 1 && commands[0].equalsIgnoreCase("PING")) {
@@ -104,7 +110,9 @@ public class BabyRedisServer {
                     return RespEncoder.encodeError("ERR Value isn't provided");
                 }
                 store.set(key, value);
-                aofManager.logCommand(line);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "GET" -> {
@@ -120,13 +128,17 @@ public class BabyRedisServer {
                 }
                 // Delete key from store
                 store.delete(key);
-                aofManager.logCommand(line);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "SADD" -> {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
                 store.sAdd(key, values);
-                aofManager.logCommand(line);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
 
                 return RespEncoder.encodeString("OK");
             }
@@ -134,7 +146,9 @@ public class BabyRedisServer {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
 
                 store.sRem(key, values);
-                aofManager.logCommand(line);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "SISMEMBER", "SIM" -> {
@@ -187,9 +201,12 @@ public class BabyRedisServer {
 
                 // Format file write line Current timestamp + given time
 
-                aofManager.logCommand(
+                if (!isAOFReplay) {
+                    aofManager.logCommand(
+                        String.format("%s %s %s", "EXPIREAT", key, expiryTimestamp)
+                    );
+                }
 
-                        String.format("%s %s %s", "EXPIREAT", key, expiryTimestamp));
 
                 return RespEncoder.encodeInteger(1);
             }
@@ -237,7 +254,9 @@ public class BabyRedisServer {
                     expireQueueState.remove(flushedKey);
                 }
 
-                aofManager.logCommand(line);
+                if(!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
 
@@ -278,19 +297,31 @@ public class BabyRedisServer {
         }
     }
 
-    private void loadSnapshot() {
+    private void replayState() {
 
         SnapshotData snapshot = snapshotManager.load();
         store.loadState(new StoreState(snapshot.stringSnapshot(), snapshot.setSnapshot()));
 
+        int lastSnapshotSequence = snapshotManager.getLastSequence();
         expireQueueState.putAll(snapshot.expiryQueueSnapshot());
 
         loadExpireQueue();
+
+        replayAOF(lastSnapshotSequence);
+
+    }
+
+    private void replayAOF(int lastSnapshotSequence) {
+        List<String> commands = aofManager.loadAfter(lastSnapshotSequence);
+        for (String command : commands) {
+            execute(command, true);
+        }
     }
 
     private void saveSnapshot() {
         StoreState state = store.exportState();
-        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)));
+        int sequence = aofManager.getCurrentSequence();
+        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)), sequence);
     }
 
     private String[] parseOperation(String line) {
