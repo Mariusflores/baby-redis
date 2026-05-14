@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import io.babyredis.server.snapshot.SnapshotData;
-import io.babyredis.server.snapshot.SnapshotManager;
 
 /**
  * A simple in-memory store for handling string and set operations.
@@ -22,16 +20,13 @@ public class InMemoryStore {
 
     private final ConcurrentHashMap<String, String> stringStore;
     private final ConcurrentHashMap<String, Set<String>> setStore;
-    private final SnapshotManager snapshotManager;
 
     /**
      * Constructs a new InMemoryStore with the specified SnapshotManager. The InMemoryStore uses the SnapshotManager to handle the writing and reading of snapshots of the in-memory data, allowing for persistence of the server's state across restarts.
      * The constructor initializes the string and set stores as ConcurrentHashMaps, providing thread-safe access to the in-memory data.
      *
-     * @param snapshotManager the SnapshotManager instance used for handling snapshot operations for the in-memory store
      */
-    public InMemoryStore(SnapshotManager snapshotManager) {
-        this.snapshotManager = snapshotManager;
+    public InMemoryStore() {
         stringStore = new ConcurrentHashMap<>();
         setStore = new ConcurrentHashMap<>();
     }
@@ -135,29 +130,6 @@ public class InMemoryStore {
         setStore.remove(key);
     }
 
-    /**
-     * Writes a snapshot of the current state of the in-memory store to a file using the SnapshotManager. This method takes a map of expiring keys with their corresponding expiration timestamps as a parameter and passes it along with the current state of the stringStore and setStore to the SnapshotManager's write method. The SnapshotManager will serialize this data and save it to a snapshot file, allowing for persistence of the server's state across restarts.
-     *
-     * @param expiryMap a map of expiring keys with their corresponding expiration timestamps to be included in the snapshot of the in-memory store
-     */
-    public void writeSnapshot(Map<String, Long> expiryMap) {
-        snapshotManager.write(Map.copyOf(stringStore), Map.copyOf(setStore), expiryMap);
-    }
-
-    /**
-     * Reads a snapshot of the in-memory store from a file using the SnapshotManager and restores the state of the stringStore and setStore. This method calls the SnapshotManager's read method to retrieve the snapshot data, which includes the string key-value pairs, sets, and expiring keys with their corresponding expiration timestamps. The method then populates the stringStore and setStore with the data from the snapshot, allowing the Baby Redis server to restore its state when it starts up.
-     *
-     * @return a SnapshotData record containing the restored state of the in-memory store, including string key-value pairs, sets, and expiring keys, read from the snapshot file
-     */
-    public SnapshotData readSnapshot() {
-        SnapshotData data = snapshotManager.read();
-
-        stringStore.putAll(data.stringSnapshot());
-        setStore.putAll(data.setSnapshot());
-
-        return data;
-    }
-
     /***
      * Retrieves all keys currently stored in the in-memory store, including both string keys and set keys. 
      * This method iterates through the key sets of both the stringStore and setStore maps, collects all unique keys into a list, 
@@ -223,5 +195,21 @@ public class InMemoryStore {
 
         return flushedKeys;
     }
+
+
+    public StoreState exportState() {
+        return new StoreState(Map.copyOf(stringStore), Map.copyOf(setStore));
+    }
+
+    public void loadState(StoreState storeState) {
+        stringStore.clear();
+        setStore.clear();
+
+        stringStore.putAll(storeState.stringStore());
+        setStore.putAll(storeState.setStore());
+    }
+
+
+
 
 }

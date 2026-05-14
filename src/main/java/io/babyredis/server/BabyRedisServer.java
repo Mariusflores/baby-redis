@@ -2,15 +2,16 @@ package io.babyredis.server;
 
 import io.babyredis.error.BabyRedisException;
 import io.babyredis.protocol.RespEncoder;
-import io.babyredis.server.snapshot.SnapshotData;
-import io.babyredis.server.snapshot.SnapshotManager;
+import io.babyredis.server.persistence.AppendOnlyPersistence;
+import io.babyredis.server.persistence.SnapshotData;
+import io.babyredis.server.persistence.SnapshotPersistence;
 import io.babyredis.server.store.ExpiringKey;
 import io.babyredis.server.store.InMemoryStore;
+import io.babyredis.server.store.StoreState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
@@ -21,19 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
 public class BabyRedisServer {
-    private final SnapshotManager snapshotManager = new SnapshotManager(new File("snapshot.txt"));
+    private final SnapshotPersistence snapshotManager;
+    private final AppendOnlyPersistence aofManager;
     private static final Logger log = LoggerFactory.getLogger(BabyRedisServer.class);
     private final Set<Socket> activeConnections;
 
-
-    private final InMemoryStore store = new InMemoryStore(snapshotManager);
+    private final InMemoryStore store = new InMemoryStore();
     private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
-
-    public BabyRedisServer() throws IOException {
+    public BabyRedisServer(
+            SnapshotPersistence snapshotManager,
+            AppendOnlyPersistence aofManager) throws IOException {
         // Retrieves instigates snapshot retrieval
-        readSnapshot();
+        this.snapshotManager = snapshotManager;
+        this.aofManager = aofManager;
+        replayState();
         activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {
@@ -46,8 +50,8 @@ public class BabyRedisServer {
 
                 } catch (InterruptedException e) {
                     throw new BabyRedisException(
-                        "Error occurred while tracking expired keys", 
-                        e);
+                            "Error occurred while tracking expired keys",
+                            e);
                 }
             }
         };
@@ -60,12 +64,11 @@ public class BabyRedisServer {
                 try {
                     Thread.sleep(30000);
 
-                    writeSnapshot();
+                    saveSnapshot();
                 } catch (InterruptedException e) {
                     throw new BabyRedisException(
-                        "Error occurred while syncing snapshot", 
-                        e
-                    );
+                            "Error occurred while syncing snapshot",
+                            e);
                 }
             }
 
@@ -74,22 +77,17 @@ public class BabyRedisServer {
         Thread.ofVirtual().start(syncSnapshot);
     }
 
-    private void readSnapshot() {
-
-        SnapshotData snapshot = store.readSnapshot();
-
-        expireQueueState.putAll(snapshot.expiryQueueSnapshot());
-
-        loadExpireQueue();
-    }
-
     private void loadExpireQueue() {
-        expireQueueState.forEach((k, v) ->
-                expireQueue.add(new ExpiringKey(k, v))
-        );
+        expireQueueState.forEach((k, v) -> expireQueue.add(new ExpiringKey(k, v)));
     }
 
+    // Method for executing commands, takes a command line string as input and returns the response string. The method parses the command line, identifies the operation and its arguments, and performs the corresponding action on the in-memory store. It also handles logging of commands to the AOF file for persistence and returns appropriate responses based on the command execution results.
     public String execute(String line) {
+        return execute(line, false);
+    }
+
+    // Overloaded execute method for AOF replay, takes an additional boolean parameter to indicate whether the command is being executed as part of AOF replay. This allows for different handling of commands during normal execution versus AOF replay, such as skipping AOF logging during replay to avoid duplicate entries in the AOF file.
+    public String execute(String line, boolean isAOFReplay) {
         String[] commands = parseOperation(line);
 
         if (commands.length == 1 && commands[0].equalsIgnoreCase("PING")) {
@@ -112,6 +110,9 @@ public class BabyRedisServer {
                     return RespEncoder.encodeError("ERR Value isn't provided");
                 }
                 store.set(key, value);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "GET" -> {
@@ -127,12 +128,17 @@ public class BabyRedisServer {
                 }
                 // Delete key from store
                 store.delete(key);
-
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "SADD" -> {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
                 store.sAdd(key, values);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
 
                 return RespEncoder.encodeString("OK");
             }
@@ -140,6 +146,9 @@ public class BabyRedisServer {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
 
                 store.sRem(key, values);
+                if (!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
             case "SISMEMBER", "SIM" -> {
@@ -179,11 +188,11 @@ public class BabyRedisServer {
 
                 // Start simple parse the input, add to queue and write to file.
                 // Error handling next iteration
-                if (commands.length < 3) return RespEncoder.encodeError("ERR missing arguments");
+                if (commands.length < 3)
+                    return RespEncoder.encodeError("ERR missing arguments");
 
                 long value = Long.parseLong(commands[2]);
                 long expiryTimestamp = System.currentTimeMillis() + (value * 1000);
-
 
                 ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
 
@@ -192,16 +201,38 @@ public class BabyRedisServer {
 
                 // Format file write line Current timestamp + given time
 
+                if (!isAOFReplay) {
+                    aofManager.logCommand(
+                        String.format("%s %s %s", "EXPIREAT", key, expiryTimestamp)
+                    );
+                }
+
+
+                return RespEncoder.encodeInteger(1);
+            }
+
+            // Similar to EXPIRE but with absolute timestamp instead of relative time, used
+            // for AOF Replay
+            case "EXPIREAT" -> {
+                if (commands.length < 3)
+                    return RespEncoder.encodeError("ERR missing arguments");
+
+                long expiryTimestamp = Long.parseLong(commands[2]);
+
+                ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
+
+                expireQueue.add(expiringKey);
+                expireQueueState.put(key, expiryTimestamp);
 
                 return RespEncoder.encodeInteger(1);
             }
 
             case "KEYS" -> {
-                if(commands.length > 2){
+                if (commands.length > 2) {
                     // For simplicity, only support KEYS * for now
                     return RespEncoder.encodeError("ERR Unsupported pattern, only KEYS * or KEYS prefix* is supported");
                 }
-                String[] keys = store.getAllKeysMatchingPattern( commands.length == 2 ? commands[1] : "*");
+                String[] keys = store.getAllKeysMatchingPattern(commands.length == 2 ? commands[1] : "*");
 
                 return RespEncoder.encodeArray(keys);
             }
@@ -210,19 +241,22 @@ public class BabyRedisServer {
 
                 String pattern = "*";
 
-                if(commands.length == 2){
+                if (commands.length == 2) {
                     pattern = commands[1];
                 }
 
                 // Clear store
-                List <String > flushedKeys = store.flushMatchingPattern(pattern);
+                List<String> flushedKeys = store.flushMatchingPattern(pattern);
                 // Clear expire queue and state
 
-                for(String flushedKey : flushedKeys){
+                for (String flushedKey : flushedKeys) {
                     expireQueue.removeIf(k -> k.getKey().equals(flushedKey));
                     expireQueueState.remove(flushedKey);
                 }
 
+                if(!isAOFReplay) {
+                    aofManager.logCommand(line);
+                }
                 return RespEncoder.encodeString("OK");
             }
 
@@ -244,8 +278,13 @@ public class BabyRedisServer {
     }
 
     public void close() throws IOException {
-        writeSnapshot();
+        saveSnapshot();
         closeAllConnections();
+        try {
+            aofManager.close();
+        } catch (Exception e) {
+            log.error("Error closing AOF manager", e);
+        }
     }
 
     private void closeAllConnections() {
@@ -258,13 +297,35 @@ public class BabyRedisServer {
         }
     }
 
-    private void writeSnapshot() {
-        store.writeSnapshot(Map.copyOf(expireQueueState));
+    private void replayState() {
+
+        SnapshotData snapshot = snapshotManager.load();
+        store.loadState(new StoreState(snapshot.stringSnapshot(), snapshot.setSnapshot()));
+
+        int lastSnapshotSequence = snapshotManager.getLastSequence();
+        expireQueueState.putAll(snapshot.expiryQueueSnapshot());
+
+        loadExpireQueue();
+
+        replayAOF(lastSnapshotSequence);
+
+    }
+
+    private void replayAOF(int lastSnapshotSequence) {
+        List<String> commands = aofManager.loadAfter(lastSnapshotSequence);
+        for (String command : commands) {
+            execute(command, true);
+        }
+    }
+
+    private void saveSnapshot() {
+        StoreState state = store.exportState();
+        int sequence = aofManager.getCurrentSequence();
+        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)), sequence);
     }
 
     private String[] parseOperation(String line) {
         return line.trim().split(" ");
     }
-
 
 }

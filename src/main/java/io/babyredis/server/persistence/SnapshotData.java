@@ -1,4 +1,4 @@
-package io.babyredis.server.snapshot;
+package io.babyredis.server.persistence;
 
 import java.util.Map;
 import java.util.Set;
