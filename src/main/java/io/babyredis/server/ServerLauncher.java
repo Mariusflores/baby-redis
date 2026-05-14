@@ -3,8 +3,10 @@ package io.babyredis.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.babyredis.server.persistence.AppendOnlyPersistence;
 import io.babyredis.server.persistence.SnapshotManager;
 import io.babyredis.server.persistence.SnapshotPersistence;
+import io.babyredis.server.persistence.AOFManager;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -24,7 +26,8 @@ public class ServerLauncher {
                 ExecutorService executor = Executors.newFixedThreadPool(10)
         ) {
             SnapshotPersistence snapshotManager = new SnapshotManager(new File("persistence/snapshot.txt"));
-            BabyRedisServer server = new BabyRedisServer(snapshotManager);
+            AppendOnlyPersistence aofManager = new AOFManager(new File("persistence/aof.txt"));
+            BabyRedisServer server = new BabyRedisServer(snapshotManager, aofManager);
             log.info("Server started listening on port 6379");
 
             // Shutdown hook to save snapshot and close connections
