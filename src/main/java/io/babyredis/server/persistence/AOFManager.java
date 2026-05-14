@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.List;
 
 public class AOFManager implements AppendOnlyPersistence {
+
     private final File aofFile;
     private final BufferedWriter writer;
     int currentSequence = 0;
@@ -28,13 +29,14 @@ public class AOFManager implements AppendOnlyPersistence {
         try {
             currentSequence++;
 
-            writer.write(String.format("%d:%s\n", currentSequence, command)); // Write the command with the current sequence number
+            writer.write(String.format("%d:%s\n", currentSequence, command)); // Write the command with the current
+                                                                              // sequence number
             writer.flush();
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to log command to AOF file", e);
         }
-        
+
     }
 
     @Override
@@ -44,9 +46,10 @@ public class AOFManager implements AppendOnlyPersistence {
             currentSequence = 0;
             return commands; // Return empty list if AOF file does not exist
         }
-        try(BufferedReader reader = new BufferedReader(new java.io.FileReader(aofFile))){
-            // Read the AOF file and load commands with sequence numbers greater than lastSequence
-            
+        try (BufferedReader reader = new BufferedReader(new java.io.FileReader(aofFile))) {
+            // Read the AOF file and load commands with sequence numbers greater than
+            // lastSequence
+
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(":", 2);
@@ -62,7 +65,8 @@ public class AOFManager implements AppendOnlyPersistence {
         } catch (IOException e) {
             throw new RuntimeException("Failed to load commands from AOF file", e);
         }
-        // Implementation to load commands from the AOF file after the given sequence number
+        // Implementation to load commands from the AOF file after the given sequence
+        // number
         return commands;
     }
 
@@ -73,15 +77,15 @@ public class AOFManager implements AppendOnlyPersistence {
     }
 
     private void initializeSequence() {
-        // Read the AOF file to determine the last sequence number and set currentSequence accordingly
-        
+        // Read the AOF file to determine the last sequence number and set
+        // currentSequence accordingly
+
         if (!aofFile.exists()) {
             currentSequence = 0;
             return;
         }
-        try (BufferedReader reader = new BufferedReader(new java.io.FileReader(aofFile))){
+        try (BufferedReader reader = new BufferedReader(new java.io.FileReader(aofFile))) {
 
-        
             String line;
             int maxSequence = 0;
             while ((line = reader.readLine()) != null) {
@@ -101,11 +105,10 @@ public class AOFManager implements AppendOnlyPersistence {
     }
 
     @Override
-    public void close() throws Exception {
-        // Implementation to close any resources used by the AOF manager
+    public void close() throws IOException {
         writer.close();
     }
 
 
-    
+
 }

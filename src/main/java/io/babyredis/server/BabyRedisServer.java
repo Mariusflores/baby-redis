@@ -2,6 +2,7 @@ package io.babyredis.server;
 
 import io.babyredis.error.BabyRedisException;
 import io.babyredis.protocol.RespEncoder;
+import io.babyredis.server.persistence.AppendOnlyPersistence;
 import io.babyredis.server.persistence.SnapshotData;
 import io.babyredis.server.persistence.SnapshotPersistence;
 import io.babyredis.server.store.ExpiringKey;
@@ -22,21 +23,20 @@ import java.util.concurrent.DelayQueue;
 
 public class BabyRedisServer {
     private final SnapshotPersistence snapshotManager;
+    private final AppendOnlyPersistence aofManager;
     private static final Logger log = LoggerFactory.getLogger(BabyRedisServer.class);
     private final Set<Socket> activeConnections;
-
 
     private final InMemoryStore store = new InMemoryStore();
     private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
 
-
     public BabyRedisServer(
-        SnapshotPersistence snapshotManager
-
-    ) throws IOException {
+            SnapshotPersistence snapshotManager,
+            AppendOnlyPersistence aofManager) throws IOException {
         // Retrieves instigates snapshot retrieval
         this.snapshotManager = snapshotManager;
+        this.aofManager = aofManager;
         loadSnapshot();
         activeConnections = ConcurrentHashMap.newKeySet();
         // Daemon thread, tracks and removes items from expireQueue
@@ -50,8 +50,8 @@ public class BabyRedisServer {
 
                 } catch (InterruptedException e) {
                     throw new BabyRedisException(
-                        "Error occurred while tracking expired keys", 
-                        e);
+                            "Error occurred while tracking expired keys",
+                            e);
                 }
             }
         };
@@ -67,9 +67,8 @@ public class BabyRedisServer {
                     saveSnapshot();
                 } catch (InterruptedException e) {
                     throw new BabyRedisException(
-                        "Error occurred while syncing snapshot", 
-                        e
-                    );
+                            "Error occurred while syncing snapshot",
+                            e);
                 }
             }
 
@@ -79,9 +78,7 @@ public class BabyRedisServer {
     }
 
     private void loadExpireQueue() {
-        expireQueueState.forEach((k, v) ->
-                expireQueue.add(new ExpiringKey(k, v))
-        );
+        expireQueueState.forEach((k, v) -> expireQueue.add(new ExpiringKey(k, v)));
     }
 
     public String execute(String line) {
@@ -107,6 +104,7 @@ public class BabyRedisServer {
                     return RespEncoder.encodeError("ERR Value isn't provided");
                 }
                 store.set(key, value);
+                aofManager.logCommand(line);
                 return RespEncoder.encodeString("OK");
             }
             case "GET" -> {
@@ -122,12 +120,13 @@ public class BabyRedisServer {
                 }
                 // Delete key from store
                 store.delete(key);
-
+                aofManager.logCommand(line);
                 return RespEncoder.encodeString("OK");
             }
             case "SADD" -> {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
                 store.sAdd(key, values);
+                aofManager.logCommand(line);
 
                 return RespEncoder.encodeString("OK");
             }
@@ -135,6 +134,7 @@ public class BabyRedisServer {
                 var values = Arrays.copyOfRange(commands, 2, commands.length);
 
                 store.sRem(key, values);
+                aofManager.logCommand(line);
                 return RespEncoder.encodeString("OK");
             }
             case "SISMEMBER", "SIM" -> {
@@ -174,11 +174,11 @@ public class BabyRedisServer {
 
                 // Start simple parse the input, add to queue and write to file.
                 // Error handling next iteration
-                if (commands.length < 3) return RespEncoder.encodeError("ERR missing arguments");
+                if (commands.length < 3)
+                    return RespEncoder.encodeError("ERR missing arguments");
 
                 long value = Long.parseLong(commands[2]);
                 long expiryTimestamp = System.currentTimeMillis() + (value * 1000);
-
 
                 ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
 
@@ -187,16 +187,35 @@ public class BabyRedisServer {
 
                 // Format file write line Current timestamp + given time
 
+                aofManager.logCommand(
+
+                        String.format("%s %s %s", "EXPIREAT", key, expiryTimestamp));
+
+                return RespEncoder.encodeInteger(1);
+            }
+
+            // Similar to EXPIRE but with absolute timestamp instead of relative time, used
+            // for AOF Replay
+            case "EXPIREAT" -> {
+                if (commands.length < 3)
+                    return RespEncoder.encodeError("ERR missing arguments");
+
+                long expiryTimestamp = Long.parseLong(commands[2]);
+
+                ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
+
+                expireQueue.add(expiringKey);
+                expireQueueState.put(key, expiryTimestamp);
 
                 return RespEncoder.encodeInteger(1);
             }
 
             case "KEYS" -> {
-                if(commands.length > 2){
+                if (commands.length > 2) {
                     // For simplicity, only support KEYS * for now
                     return RespEncoder.encodeError("ERR Unsupported pattern, only KEYS * or KEYS prefix* is supported");
                 }
-                String[] keys = store.getAllKeysMatchingPattern( commands.length == 2 ? commands[1] : "*");
+                String[] keys = store.getAllKeysMatchingPattern(commands.length == 2 ? commands[1] : "*");
 
                 return RespEncoder.encodeArray(keys);
             }
@@ -205,19 +224,20 @@ public class BabyRedisServer {
 
                 String pattern = "*";
 
-                if(commands.length == 2){
+                if (commands.length == 2) {
                     pattern = commands[1];
                 }
 
                 // Clear store
-                List <String > flushedKeys = store.flushMatchingPattern(pattern);
+                List<String> flushedKeys = store.flushMatchingPattern(pattern);
                 // Clear expire queue and state
 
-                for(String flushedKey : flushedKeys){
+                for (String flushedKey : flushedKeys) {
                     expireQueue.removeIf(k -> k.getKey().equals(flushedKey));
                     expireQueueState.remove(flushedKey);
                 }
 
+                aofManager.logCommand(line);
                 return RespEncoder.encodeString("OK");
             }
 
@@ -241,6 +261,11 @@ public class BabyRedisServer {
     public void close() throws IOException {
         saveSnapshot();
         closeAllConnections();
+        try {
+            aofManager.close();
+        } catch (Exception e) {
+            log.error("Error closing AOF manager", e);
+        }
     }
 
     private void closeAllConnections() {
@@ -265,7 +290,7 @@ public class BabyRedisServer {
 
     private void saveSnapshot() {
         StoreState state = store.exportState();
-         snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)));
+        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)));
     }
 
     private String[] parseOperation(String line) {
