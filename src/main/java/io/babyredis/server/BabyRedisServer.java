@@ -1,26 +1,22 @@
 package io.babyredis.server;
 
-import io.babyredis.error.BabyRedisException;
-import io.babyredis.protocol.RespEncoder;
-import io.babyredis.server.engine.CommandExecutor;
-import io.babyredis.server.persistence.AppendOnlyPersistence;
-import io.babyredis.server.persistence.SnapshotData;
-import io.babyredis.server.persistence.SnapshotPersistence;
-import io.babyredis.server.store.ExpiringKey;
-import io.babyredis.server.store.InMemoryStore;
-import io.babyredis.server.store.StoreState;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.DelayQueue;
+import io.babyredis.error.BabyRedisException;
+import io.babyredis.server.engine.CommandExecutor;
+import io.babyredis.server.engine.ExpiryManager;
+import io.babyredis.server.persistence.AppendOnlyPersistence;
+import io.babyredis.server.persistence.SnapshotData;
+import io.babyredis.server.persistence.SnapshotPersistence;
+import io.babyredis.server.store.InMemoryStore;
+import io.babyredis.server.store.StoreState;
 
 public class BabyRedisServer {
     private final SnapshotPersistence snapshotManager;
@@ -30,8 +26,7 @@ public class BabyRedisServer {
 
     private final InMemoryStore store = new InMemoryStore();
     private final CommandExecutor commandExecutor;
-    private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
-    private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
+    private final ExpiryManager expiryManager = new ExpiryManager(store::purge);
 
     public BabyRedisServer(
             SnapshotPersistence snapshotManager,
@@ -39,26 +34,10 @@ public class BabyRedisServer {
         // Retrieves instigates snapshot retrieval
         this.snapshotManager = snapshotManager;
         this.aofManager = aofManager;
-        commandExecutor = new CommandExecutor(aofManager, store, expireQueueState, expireQueue);
+        commandExecutor = new CommandExecutor(aofManager, store, expiryManager);
         replayState();
         activeConnections = ConcurrentHashMap.newKeySet();
-        // Daemon thread, tracks and removes items from expireQueue
-        Runnable expireTrack = () -> {
-            while (true) {
-                try {
-                    ExpiringKey key = expireQueue.take();
 
-                    store.purge(key.getKey());
-                    expireQueueState.remove(key.getKey());
-
-                } catch (InterruptedException e) {
-                    throw new BabyRedisException(
-                            "Error occurred while tracking expired keys",
-                            e);
-                }
-            }
-        };
-        Thread.ofVirtual().start(expireTrack);
 
         // Daemon thread, Sync snapshot every 30 seconds
         // TODO confirm snapshot throws on error
@@ -84,9 +63,7 @@ public class BabyRedisServer {
         return commandExecutor.execute(command);
     }
 
-    private void loadExpireQueue() {
-        expireQueueState.forEach((k, v) -> expireQueue.add(new ExpiringKey(k, v)));
-    }
+
 
     public void addSocket(Socket s) {
         activeConnections.add(s);
@@ -125,9 +102,9 @@ public class BabyRedisServer {
         store.loadState(new StoreState(snapshot.stringSnapshot(), snapshot.setSnapshot()));
 
         int lastSnapshotSequence = snapshotManager.getLastSequence();
-        expireQueueState.putAll(snapshot.expiryQueueSnapshot());
+        expiryManager.setQueueState(snapshot.expiryQueueSnapshot());
 
-        loadExpireQueue();
+        expiryManager.loadQueue();
 
         replayAOF(lastSnapshotSequence);
 
@@ -143,7 +120,7 @@ public class BabyRedisServer {
     private void saveSnapshot() {
         StoreState state = store.exportState();
         int sequence = aofManager.getCurrentSequence();
-        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), Map.copyOf(expireQueueState)), sequence);
+        snapshotManager.save(new SnapshotData(state.stringStore(), state.setStore(), expiryManager.getQueueState()), sequence);
     }
 
 }

@@ -14,20 +14,18 @@ import io.babyredis.server.store.InMemoryStore;
 public class CommandExecutor {
     private final AppendOnlyPersistence aofManager;
     private final InMemoryStore store;
-    private final Map<String, Long> expireQueueState;
-    private final DelayQueue<ExpiringKey> expireQueue;
+    private final ExpiryManager expiryManager;
 
     public CommandExecutor(
         AppendOnlyPersistence aofManager,
         InMemoryStore store,
-        Map<String, Long> expireQueueState,
-        DelayQueue<ExpiringKey> expireQueue
+        ExpiryManager expiryManager
     
     ) {
         this.aofManager = aofManager;
         this.store = store;
-        this.expireQueueState = expireQueueState;
-        this.expireQueue = expireQueue;
+        this.expiryManager = expiryManager;
+
     }
 
 
@@ -71,11 +69,8 @@ public class CommandExecutor {
             }
             case "DELETE" -> {
                 // Delete existing expire countdown
-                if (expireQueueState.containsKey(key)) {
-                    expireQueueState.remove(key);
-                    expireQueue.removeIf(entry -> entry.getKey().equals(key));
-
-                }
+                    expiryManager.removeKey(key);
+                
                 // Delete key from store
                 store.delete(key);
                 if (!isAOFReplay) {
@@ -120,7 +115,7 @@ public class CommandExecutor {
                 return RespEncoder.encodeArray(set.toArray(new String[0]));
             }
             case "TTL" -> {
-                Long timestamp = expireQueueState.get(key);
+                Long timestamp = expiryManager.getQueueState().get(key);
 
                 if (timestamp == null) {
                     // return -1 when expiry not set
@@ -142,18 +137,15 @@ public class CommandExecutor {
                     return RespEncoder.encodeError("ERR missing arguments");
 
                 long value = Long.parseLong(commands[2]);
-                long expiryTimestamp = System.currentTimeMillis() + (value * 1000);
+                long ttlMillis = System.currentTimeMillis() + (value * 1000);
 
-                ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
-
-                expireQueue.add(expiringKey);
-                expireQueueState.put(key, expiryTimestamp);
+                expiryManager.addKey(key, ttlMillis);
 
                 // Format file write line Current timestamp + given time
 
                 if (!isAOFReplay) {
                     aofManager.logCommand(
-                        String.format("%s %s %s", "EXPIREAT", key, expiryTimestamp)
+                        String.format("%s %s %s", "EXPIREAT", key, ttlMillis)
                     );
                 }
 
@@ -169,10 +161,7 @@ public class CommandExecutor {
 
                 long expiryTimestamp = Long.parseLong(commands[2]);
 
-                ExpiringKey expiringKey = new ExpiringKey(key, expiryTimestamp);
-
-                expireQueue.add(expiringKey);
-                expireQueueState.put(key, expiryTimestamp);
+                expiryManager.addKey(key, expiryTimestamp);
 
                 return RespEncoder.encodeInteger(1);
             }
@@ -200,8 +189,7 @@ public class CommandExecutor {
                 // Clear expire queue and state
 
                 for (String flushedKey : flushedKeys) {
-                    expireQueue.removeIf(k -> k.getKey().equals(flushedKey));
-                    expireQueueState.remove(flushedKey);
+                    expiryManager.removeKey(flushedKey);
                 }
 
                 if(!isAOFReplay) {
