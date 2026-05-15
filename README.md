@@ -10,6 +10,10 @@ built in Java as a deep dive into network protocols, data structures, and
 systems programming.
 
 ## Recent updates
+- **0.4.0**: 
+  - Decoupled `InMemoryStore` from `SnapshotManager` — store no longer knows about persistence.
+  - Append-Only File (AOF) persistence with sequential command logging.
+
 - **0.3.0**: Added FLUSHDB command with support for full and pattern-based (prefix*) key deletion. Enhanced KEYS command to support prefix-based pattern matching (KEYS prefix*).
 
 - **0.2.0**: Implemented RESP-inspired wire protocol for typed client-server communication.
