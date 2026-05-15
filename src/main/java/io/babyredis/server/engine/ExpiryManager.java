@@ -12,10 +12,8 @@ public class ExpiryManager {
 
     private final DelayQueue<ExpiringKey> expireQueue = new DelayQueue<>();
     private final Map<String, Long> expireQueueState = new ConcurrentHashMap<>();
-    private final Consumer<String> purgeCallback;
 
     public ExpiryManager(Consumer<String> purgeCallback) {
-        this.purgeCallback = purgeCallback;
 
         // Daemon thread, tracks and removes items from expireQueue
         Runnable expireTrack = () -> {

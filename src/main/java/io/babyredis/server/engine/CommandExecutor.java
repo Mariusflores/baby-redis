@@ -2,13 +2,9 @@ package io.babyredis.server.engine;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.DelayQueue;
 
 import io.babyredis.protocol.RespEncoder;
 import io.babyredis.server.persistence.AppendOnlyPersistence;
-import io.babyredis.server.store.ExpiringKey;
 import io.babyredis.server.store.InMemoryStore;
 
 public class CommandExecutor {
