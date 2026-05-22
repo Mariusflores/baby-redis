@@ -9,6 +9,9 @@ A from-scratch implementation of a Redis-inspired in-memory key-value store,
 built in Java as a deep dive into network protocols, data structures, and
 systems programming.
 
+## Architecture
+![Baby Redis Architecture](docs/architecture.png)
+
 ## Recent updates
 - **0.4.0**: 
   - Decoupled `InMemoryStore` from `SnapshotManager` — store no longer knows about persistence.
@@ -26,10 +29,14 @@ systems programming.
 
 - TCP server accepting concurrent client connections
 - RESP-inspired wire protocol for typed client-server communication
+- Hybrid persistence:
+    - **RDB-style snapshots** — periodic + shutdown saves with atomic temp-file-then-rename
+    - **Append-Only File (AOF)** — sequential command logging with sequence tracking
+    - **Hybrid recovery** — load snapshot, then replay AOF commands after snapshot's sequence number
 - Supported commands:
     - **Strings:** `GET`, `SET`, `DELETE`
     - **Sets:** `SADD`, `SREM`, `SISMEMBER`, `SMEMBERS`
-    - **Expiry:** `EXPIRE`, `TTL`
+    - **Expiry:** `EXPIRE`, `EXPIREAT`, `TTL`
     - **Key management:** `KEYS` (supports `*` and `prefix*` patterns), `FLUSHDB` (supports full and pattern-based flush)
     - **Test:** `PING`
 
@@ -91,7 +98,13 @@ The server listens on port `6379` by default.
 - [x] Add FLUSHDB command with pattern-based and full flush support
 - [x] Enhance KEYS command to support prefix-based pattern matching
 - [x] Build personal tools on top of the ecosystem (expense tracker, dashboard)
-- [ ] Introduce KeyValueStore interface
+- [x] Hybrid persistence (RDB snapshots + AOF with sequence tracking)
+- [x] Decouple persistence from store (dependency injection, interfaces)
+- [x] Extract CommandExecutor and ExpiryManager from server
+- [ ] Configurable persistence mode (snapshot only / AOF only / hybrid)
+- [ ] Pub/Sub support
+- [ ] List operations (`LPUSH`, `LPOP`)
+- [ ] Eviction policies
 
 ## Related
 
@@ -102,5 +115,7 @@ The server listens on port `6379` by default.
 - [baby-redis-protocol](https://github.com/mariusflores/baby-redis-protocol) — shared RESP protocol library
 - [expense-tracker](https://github.com/mariusflores/expense-tracker) — a personal tool to track economy and spending trends. Uses baby-redis for data storage.
 - [energy-monitor](https://github.com/mariusflores/energy-monitor) — a personal tool to show energy-prices taken from public API. still early development. Uses baby-redis to cache energy-price data
+- [sensor-data-simulator](https://github.com/mariusflores/sensor-data-pipeline) — smart meter data pipeline simulator sending concurrent readings to baby-redis
+
   
 
