@@ -23,7 +23,7 @@ systems programming.
 
 ## Status
 
-🚧 **In active development.** Core functionality and persistance works. Working on expanding method catalog
+**Taking a break** Core functionality and persistance works. Taking a break to focus on work and studies.
 
 ## Features
 
